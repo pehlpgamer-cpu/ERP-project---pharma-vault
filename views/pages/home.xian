@@ -3,6 +3,6 @@
     Welcome to XianFire
     <i class="bi bi-fire text-orange-500 text-xxl"></i>
   </h1>
-  <p class="text-center mt-4">Home Page</p>
+  <p class="text-center mt-4">Home Page!!!!!!!!!!!!!!!</p>
   <p class="text-center mt-4">{{content}}</p>
 </div>

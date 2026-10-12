@@ -13,6 +13,9 @@ export default {
   index: async (req, res) => {
     const validated = getUserRequest(req);
 
+   
+
+    insert.data(data)
     const users = [
       {
         id: 1,
