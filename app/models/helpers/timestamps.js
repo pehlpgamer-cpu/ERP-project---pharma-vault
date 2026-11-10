@@ -1,7 +1,6 @@
-import { timestamp } from 'drizzle-orm/mysql-core';
+import { timestamp } from "drizzle-orm/mysql-core";
 
 export default {
-  updated_at: timestamp(),
-  created_at: timestamp().defaultNow().notNull(),
-  deleted_at: timestamp(),
-}
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
+};
