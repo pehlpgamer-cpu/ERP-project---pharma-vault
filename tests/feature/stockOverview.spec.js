@@ -166,8 +166,12 @@ test.group("getStockOverview", (group) => {
     ).toEqual(["Charlie"]);
     expect([refused.status, refused.code]).toEqual([403, "forbidden"]);
     expect(resolveBranch(ctx.pharmacist, ctx.main.id)).toBe(ctx.main.id);
-    expect(() => resolveBranch(ctx.pharmacist, "not-a-uuid")).toThrow();
-    expect(() => resolveBranch({ ...ctx.pharmacist, branchId: null })).toThrow();
+    expect(() => {
+      return resolveBranch(ctx.pharmacist, "not-a-uuid");
+    }).toThrow();
+    expect(() => {
+      return resolveBranch({ ...ctx.pharmacist, branchId: null });
+    }).toThrow();
   });
 });
 
