@@ -259,13 +259,14 @@ export async function makeProduct({
   };
 }
 
-export async function makeRegister({ branchId, code, name } = {}) {
+export async function makeRegister({ branchId, code, name, isActive = true } = {}) {
   const number = nextNumber();
   const register = {
     id: randomUUID(),
     branchId,
     registerCode: code ?? `R${number}`,
     name: name ?? `Counter ${number}`,
+    isActive,
   };
 
   await db.insert(cashRegisters).values(register);

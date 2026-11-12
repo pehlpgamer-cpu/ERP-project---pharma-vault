@@ -84,7 +84,4 @@
 
 <style type="text/tailwindcss">
   {{>css/viz}}
-  @layer components {
-    .cell { @apply px-3 py-2; }
-  }
 </style>

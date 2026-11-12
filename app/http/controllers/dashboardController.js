@@ -1,4 +1,5 @@
 import { can, PERMISSIONS } from "../../services/auth/permissions.js";
+import { getOpenSession } from "../../services/register/registerSessions.js";
 import { getSummary, listSales } from "../../services/sales/salesQuery.js";
 import { salesScope } from "../../services/sales/scope.js";
 import { cmp, div, mul, sum, toScale } from "../../services/support/decimal.js";
@@ -148,6 +149,7 @@ export default {
           };
         }),
       recentSales,
+      openSession: view.canManageRegister ? await getOpenSession(req.user.id) : null,
     });
   },
 };
