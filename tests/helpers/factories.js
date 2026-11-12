@@ -8,7 +8,9 @@ import { cashTransactions } from "../../app/models/cash-transactions.js";
 import { customers } from "../../app/models/customers.js";
 import { inventories } from "../../app/models/inventories.js";
 import { inventoryBatches } from "../../app/models/inventory-batches.js";
+import { manufacturers } from "../../app/models/manufacturers.js";
 import { permissions } from "../../app/models/permissions.js";
+import { productCategories } from "../../app/models/product-categories.js";
 import { productBarcodes } from "../../app/models/product-barcodes.js";
 import { productPrices } from "../../app/models/product-prices.js";
 import { productUnits } from "../../app/models/product-units.js";
@@ -344,6 +346,27 @@ export async function makeCashTransaction({ sessionId, type, amount, performedBy
   };
 
   await db.insert(cashTransactions).values(row);
+
+  return row;
+}
+
+/** The id of the unit with this name (created when missing), for product forms. */
+export async function makeUnit(name) {
+  return findOrCreateUnit(name);
+}
+
+export async function makeCategory({ name } = {}) {
+  const row = { id: randomUUID(), name: name ?? `Category ${nextNumber()}` };
+
+  await db.insert(productCategories).values(row);
+
+  return row;
+}
+
+export async function makeManufacturer({ name } = {}) {
+  const row = { id: randomUUID(), name: name ?? `Manufacturer ${nextNumber()}` };
+
+  await db.insert(manufacturers).values(row);
 
   return row;
 }

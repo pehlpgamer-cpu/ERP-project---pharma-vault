@@ -1,0 +1,85 @@
+{{!-- products/index: product list. Required: products, total, filters, filterErrors, statusOptions, categories, pagination. --}}
+<div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+  {{> components/page-header title="Products" icon="capsule"}}
+  <a href="/products/create" class="btn"><i class="bi bi-plus-lg" aria-hidden="true"></i> New product</a>
+</div>
+
+{{#if filterErrors.length}}
+<div class="mb-4 border border-red-300 bg-red-50 p-3 text-sm text-red-800" role="alert">
+  <p class="font-medium">Some filters were not applied</p>
+  <ul class="list-inside list-disc">
+    {{#each filterErrors}}
+    <li>{{this}}</li>
+    {{/each}}
+  </ul>
+</div>
+{{/if}}
+
+<form method="GET" action="/products" class="mb-4 grid gap-3 border border-gray-200 bg-white p-3 sm:grid-cols-2 lg:grid-cols-4">
+  <label class="text-sm text-gray-700 lg:col-span-2">Search
+    <input type="search" name="q" value="{{filters.q}}" maxlength="100" placeholder="SKU, name, generic or brand" class="field">
+  </label>
+  <label class="text-sm text-gray-700">Status
+    <select name="status" class="field">
+      {{#each statusOptions}}
+      <option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+      {{/each}}
+    </select>
+  </label>
+  <label class="text-sm text-gray-700">Category
+    <select name="categoryId" class="field">
+      <option value="">All categories</option>
+      {{#each categories}}
+      <option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>
+      {{/each}}
+    </select>
+  </label>
+  <div class="flex items-end gap-2">
+    <button type="submit" class="btn"><i class="bi bi-funnel" aria-hidden="true"></i> Filter</button>
+    <a href="/products" class="btn bg-gray-200">Reset</a>
+  </div>
+</form>
+
+{{#if products.length}}
+<div class="overflow-x-auto border border-gray-200 bg-white">
+  <table class="w-full text-left text-sm">
+    <thead class="bg-gray-50 text-gray-600">
+      <tr>
+        <th class="cell">SKU</th>
+        <th class="cell">Product</th>
+        <th class="cell">Generic name</th>
+        <th class="cell">Category</th>
+        <th class="cell">Class</th>
+        <th class="cell">Base unit</th>
+        <th class="cell text-right">Reorder level</th>
+        <th class="cell">Status</th>
+        <th class="cell"><span class="sr-only">Actions</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each products}}
+      <tr class="border-t border-gray-200">
+        <td class="cell whitespace-nowrap"><a href="/products/{{id}}/edit" class="font-medium text-red-700 underline">{{sku}}</a></td>
+        <td class="cell">{{productName}}</td>
+        <td class="cell">{{genericName}}</td>
+        <td class="cell">{{#if categoryName}}{{categoryName}}{{else}}<span class="text-gray-400">None</span>{{/if}}</td>
+        <td class="cell">{{prescriptionClassification}}</td>
+        <td class="cell">{{#if baseUnitName}}{{baseUnitName}}{{else}}<span class="text-gray-400">None</span>{{/if}}</td>
+        <td class="cell text-right">{{formatNumber reorderLevel}}</td>
+        <td class="cell">{{#if isActive}}<span class="rounded bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">Active</span>{{else}}<span class="rounded bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">Inactive</span>{{/if}}</td>
+        <td class="cell whitespace-nowrap text-right">
+          <a href="/products/{{id}}/edit" class="text-red-700 underline">Edit</a>
+          <form method="POST" action="/products/{{id}}/status" class="inline" {{#if isActive}}data-confirm="Deactivate this product? It disappears from the POS."{{/if}}>
+            <input type="hidden" name="active" value="{{#if isActive}}0{{else}}1{{/if}}">
+            <button type="submit" class="ml-2 cursor-pointer text-gray-700 underline">{{#if isActive}}Deactivate{{else}}Activate{{/if}}</button>
+          </form>
+        </td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+</div>
+{{> components/pagination pagination=pagination}}
+{{else}}
+{{> components/empty-state icon="capsule" title="No products found" hint="Try other filters, or add a product."}}
+{{/if}}

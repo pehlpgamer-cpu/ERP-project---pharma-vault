@@ -6,6 +6,7 @@ export const PERMISSIONS = Object.freeze({
   SALES_CREATE: "sales.create",
   REGISTER_MANAGE: "register.manage",
   USERS_MANAGE: "users.manage",
+  PRODUCTS_MANAGE: "products.manage",
 });
 
 /** Which permissions each seeded role holds (the seed and the tests share this table). */
@@ -16,6 +17,7 @@ export const ROLE_PERMISSIONS = Object.freeze({
     PERMISSIONS.SALES_VIEW_BRANCH,
     PERMISSIONS.SALES_CREATE,
     PERMISSIONS.REGISTER_MANAGE,
+    PERMISSIONS.PRODUCTS_MANAGE,
   ]),
   cashier: Object.freeze([
     PERMISSIONS.DASHBOARD_VIEW,

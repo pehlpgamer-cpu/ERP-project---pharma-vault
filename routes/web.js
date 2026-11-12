@@ -9,6 +9,7 @@ import authController from "../app/http/controllers/authController.js";
 import cashRegisterController from "../app/http/controllers/cashRegisterController.js";
 import dashboardController from "../app/http/controllers/dashboardController.js";
 import posController from "../app/http/controllers/posController.js";
+import productController from "../app/http/controllers/productController.js";
 import salesController from "../app/http/controllers/salesController.js";
 import asyncHandler from "../app/http/middleware/asyncHandler.js";
 import canSell from "../app/http/middleware/canSell.js";
@@ -28,6 +29,36 @@ router.get("/pos-page", requireAuth, canSell, asyncHandler(posController.page));
 
 router.get("/sales", requireAuth, canViewSales, asyncHandler(salesController.index));
 router.get("/sales/:id", requireAuth, canViewSales, asyncHandler(salesController.show));
+
+const canManageProducts = requirePermission(PERMISSIONS.PRODUCTS_MANAGE);
+
+// /products/create is registered before /products/:id/... so "create" is never read as an id.
+router.get("/products", requireAuth, canManageProducts, asyncHandler(productController.index));
+router.get(
+  "/products/create",
+  requireAuth,
+  canManageProducts,
+  asyncHandler(productController.create),
+);
+router.post("/products", requireAuth, canManageProducts, asyncHandler(productController.store));
+router.get(
+  "/products/:id/edit",
+  requireAuth,
+  canManageProducts,
+  asyncHandler(productController.edit),
+);
+router.post(
+  "/products/:id/status",
+  requireAuth,
+  canManageProducts,
+  asyncHandler(productController.status),
+);
+router.post(
+  "/products/:id",
+  requireAuth,
+  canManageProducts,
+  asyncHandler(productController.update),
+);
 
 const canManageRegister = requirePermission(PERMISSIONS.REGISTER_MANAGE);
 

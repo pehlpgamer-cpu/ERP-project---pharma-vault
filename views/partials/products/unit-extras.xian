@@ -1,0 +1,15 @@
+{{!-- products/unit-extras: barcodes, price and the remove button of a unit row. Params: row, idx. --}}
+<label class="text-sm text-gray-700 sm:col-span-3">Barcodes (comma or space between)
+  <input type="text" name="units[{{idx}}][barcodes]" value="{{row.barcodesText}}" class="field">
+  {{#if row.errors.barcodes}}<span class="mt-1 block text-xs text-red-700">{{row.errors.barcodes}}</span>{{/if}}
+</label>
+<label class="text-sm text-gray-700 sm:col-span-2">Selling price
+  <input type="text" name="units[{{idx}}][price]" value="{{row.price}}" inputmode="decimal" class="field">
+  {{#if row.errors.price}}<span class="mt-1 block text-xs text-red-700">{{row.errors.price}}</span>{{/if}}
+</label>
+<div class="flex flex-col items-end justify-end gap-1 pb-1">
+  {{#if row.errors.isBaseUnit}}<span class="text-xs text-red-700">{{row.errors.isBaseUnit}}</span>{{/if}}
+  {{#unless (and @root.hasHistory row.id)}}
+  <button type="button" class="btn bg-gray-200 text-sm" data-remove-unit>Remove</button>
+  {{/unless}}
+</div>
