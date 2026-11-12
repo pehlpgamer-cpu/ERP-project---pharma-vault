@@ -19,7 +19,7 @@ the day. Managers and accountants read the sales on a dashboard, in a list and t
 | `/inventory/batches` | `inventory.view` | Batches soonest-expiry first, filtered by status, expiry window or text. With `inventory.manage`: quarantine, release, recall and write off stock in your own branch, each with a reason; other branches are view only. |
 | `/users` | `users.manage` | List of accounts |
 
-Purchasing and receiving, prescriptions, returns and stock transfers have tables in the database but no
+Prescriptions, returns and stock transfers have tables in the database but no
 screens yet.
 
 ## Requirements

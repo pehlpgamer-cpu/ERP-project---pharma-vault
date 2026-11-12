@@ -37,7 +37,7 @@ test.group("base seed", (group) => {
     await resetDatabase();
   });
 
-  test("creates the two branches, four roles, ten permissions and five users", async ({
+  test("creates the two branches, four roles, fourteen permissions and five users", async ({
     expect,
   }) => {
     const codes = (await db.select().from(branches)).map((branch) => {
@@ -46,7 +46,7 @@ test.group("base seed", (group) => {
 
     expect(codes.sort()).toEqual(["MAIN", "NORTH"]);
     expect((await db.select({ n: count() }).from(roles))[0].n).toBe(4);
-    expect((await db.select({ n: count() }).from(permissions))[0].n).toBe(10);
+    expect((await db.select({ n: count() }).from(permissions))[0].n).toBe(14);
     expect((await loadAuthUser(refs.users.pharmacist.id)).permissions).toContain("products.manage");
     expect((await loadAuthUser(refs.users.admin.id)).permissions).toContain("products.manage");
     expect((await db.select({ n: count() }).from(users))[0].n).toBe(5);
@@ -85,6 +85,7 @@ test.group("base seed", (group) => {
     expect((await loadAuthUser(refs.users.accountant.id)).permissions).toEqual([
       "dashboard.view",
       "inventory.view",
+      "purchasing.view",
       "sales.view.all",
     ]);
   });

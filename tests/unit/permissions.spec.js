@@ -2,12 +2,16 @@ import { test } from "@japa/runner";
 import { can, PERMISSIONS, ROLE_PERMISSIONS } from "../../app/services/auth/permissions.js";
 
 test.group("permissions", () => {
-  test("PERMISSIONS holds exactly the ten names", ({ expect }) => {
+  test("PERMISSIONS holds exactly the fourteen names", ({ expect }) => {
     expect(Object.values(PERMISSIONS).sort()).toEqual([
       "dashboard.view",
       "inventory.manage",
+      "inventory.receive",
       "inventory.view",
       "products.manage",
+      "purchasing.approve",
+      "purchasing.manage",
+      "purchasing.view",
       "register.manage",
       "sales.create",
       "sales.view.all",
@@ -41,7 +45,7 @@ test.group("permissions", () => {
     expect(ROLE_PERMISSIONS.accountant).not.toContain("products.manage");
   });
 
-  test("the admin role has all ten permissions", ({ expect }) => {
+  test("the admin role has every permission", ({ expect }) => {
     expect([...ROLE_PERMISSIONS.admin].sort()).toEqual(Object.values(PERMISSIONS).sort());
   });
 
@@ -54,11 +58,15 @@ test.group("permissions", () => {
       "products.manage",
       "inventory.view",
       "inventory.manage",
+      "inventory.receive",
+      "purchasing.view",
+      "purchasing.manage",
     ]);
     expect(ROLE_PERMISSIONS.accountant).toEqual([
       "dashboard.view",
       "sales.view.all",
       "inventory.view",
+      "purchasing.view",
     ]);
     expect(ROLE_PERMISSIONS.cashier).not.toContain("inventory.view");
   });
