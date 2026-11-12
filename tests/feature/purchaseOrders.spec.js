@@ -325,4 +325,50 @@ test.group("purchase orders", (group) => {
     expect((await listPurchaseOrders(ctx.buyer, { status: "SENT" })).rows).toHaveLength(0);
     expect((await listPurchaseOrders(ctx.buyer, { status: "DRAFT" })).rows).toHaveLength(1);
   });
+
+  test("blank rows are skipped, keeping the original row numbers in errors", async ({ expect }) => {
+    const ctx = await setup();
+    const blank = { productUnitId: "", quantity: "", unitCost: " " };
+    const good = { productUnitId: ctx.units[1].id, quantity: "1", unitCost: "1" };
+    const { id } = await createPurchaseOrder(ctx.buyer, draft(ctx, [good, blank, {}, blank]), {
+      now: NOW,
+    });
+    const bad = await failure(
+      createPurchaseOrder(ctx.buyer, draft(ctx, [blank, { ...good, quantity: "0" }]), { now: NOW }),
+    );
+    const none = await failure(
+      createPurchaseOrder(ctx.buyer, draft(ctx, [blank, {}]), { now: NOW }),
+    );
+
+    expect((await getPurchaseOrder(ctx.buyer, id)).lines).toHaveLength(1);
+    expect(
+      bad.details.map((detail) => {
+        return detail.path;
+      }),
+    ).toEqual(["lines.1.quantity"]);
+    expect(none.details[0].path).toBe("lines");
+  });
+
+  test("impossible dates and totals too big for the columns are field errors, not 500s", async ({
+    expect,
+  }) => {
+    const ctx = await setup();
+    const paths = async (input) => {
+      return (await failure(createPurchaseOrder(ctx.buyer, input, { now: NOW }))).details.map(
+        (detail) => {
+          return detail.path;
+        },
+      );
+    };
+
+    expect(await paths({ ...draft(ctx), expectedDate: "2028-02-31" })).toEqual(["expectedDate"]);
+    expect(await paths({ ...draft(ctx), expectedDate: "2028-13-45" })).toEqual(["expectedDate"]);
+    expect(
+      await paths(
+        draft(ctx, [
+          { productUnitId: ctx.units[1].id, quantity: "99999999999", unitCost: "9999999999" },
+        ]),
+      ),
+    ).toEqual(["lines.0.unitCost"]);
+  });
 });

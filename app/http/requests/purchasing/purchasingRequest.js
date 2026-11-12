@@ -1,7 +1,8 @@
 // Shapes what a browser sends into the plain input the purchasing services validate. Only known
 // keys are read and only strings are kept, so a crafted body cannot smuggle anything else in.
 
-const MAX_ROWS = 100;
+// generous: the services enforce the real limits and refuse more instead of dropping rows
+const MAX_ROWS = 250;
 
 const str = (value) => {
   return typeof value === "string" ? value : undefined;

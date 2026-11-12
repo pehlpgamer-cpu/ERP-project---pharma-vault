@@ -182,6 +182,21 @@ test.group("purchasing pages", (group) => {
       ...HTML,
       form: { supplierId: ctx.supplier.id },
     });
+    // a browser posts every displayed row, the unused ones empty
+    const withBlankRows = await ctx.clerkSession.post("/purchase-orders", {
+      ...HTML,
+      form: orderForm(ctx, {
+        "lines[1][productUnitId]": "",
+        "lines[1][quantity]": "",
+        "lines[1][unitCost]": "",
+        "lines[2][productUnitId]": "",
+        "lines[2][quantity]": "",
+        "lines[2][unitCost]": "",
+      }),
+    });
+
+    await db.delete(purchaseOrders);
+
     const saved = await ctx.clerkSession.post("/purchase-orders", {
       ...HTML,
       form: orderForm(ctx),
@@ -197,6 +212,7 @@ test.group("purchasing pages", (group) => {
     expect(refused.text).not.toContain(XSS);
     expect(noLines.status).toBe(422);
     expect(noLines.text).toContain("Add 1 to 100 lines");
+    expect(withBlankRows.status).toBe(302);
     expect(saved.location).toBe(`/purchase-orders/${order.id}`);
     expect(order).toMatchObject({ status: "DRAFT", total: "2500.00" });
 
@@ -208,6 +224,7 @@ test.group("purchasing pages", (group) => {
 
     expect(edit.status).toBe(200);
     expect(edit.text).toContain("250.0000");
+    expect(edit.text).toContain('value="2026-12-01"');
     expect(update.status).toBe(302);
     expect((await db.select().from(purchaseOrders))[0].total).toBe("5000.00");
   });

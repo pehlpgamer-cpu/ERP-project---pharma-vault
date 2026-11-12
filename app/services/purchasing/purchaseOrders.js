@@ -18,7 +18,7 @@ import { recordAudit } from "../audit/auditLog.js";
 import { can, PERMISSIONS } from "../auth/permissions.js";
 import { add, cmp, mul, toScale } from "../support/decimal.js";
 import { isUuid } from "../support/ids.js";
-import { businessDate, toDateString } from "../support/time.js";
+import { businessDate, isRealDay } from "../support/time.js";
 import { nextDocumentNumber } from "./numbers.js";
 
 const MAX_LINES = 100;
@@ -35,6 +35,8 @@ const STATUSES = [
   "CLOSED",
   "CANCELLED",
 ];
+// DECIMAL(14,2) holds 12 whole digits
+const MAX_MONEY = "999999999999.99";
 const QUANTITY = /^\d{1,11}(\.\d{1,3})?$/;
 const COST = /^\d{1,10}(\.\d{1,4})?$/;
 
@@ -80,14 +82,28 @@ async function checkDraft(executor, input) {
   }
 
   if (expected !== undefined && expected !== null && expected !== "") {
-    expectedDate = toDateString(expected);
-
-    if (expectedDate === null || !/^\d{4}-\d{2}-\d{2}$/.test(String(expected).slice(0, 10))) {
+    if (isRealDay(expected)) {
+      expectedDate = expected;
+    } else {
       errors.push({ path: "expectedDate", message: "Enter a valid date", order: -1 });
     }
   }
 
-  if (rawLines.length === 0 || rawLines.length > MAX_LINES) {
+  // rows the user left empty are not lines; the rest keep their row number for error paths
+  const blank = (line) => {
+    return ["productUnitId", "quantity", "unitCost"].every((key) => {
+      const value = line?.[key];
+
+      return (
+        value === undefined || value === null || (typeof value === "string" && value.trim() === "")
+      );
+    });
+  };
+  const filled = rawLines.filter((line) => {
+    return !blank(line);
+  }).length;
+
+  if (rawLines.length > MAX_LINES * 2 || filled === 0 || filled > MAX_LINES) {
     errors.push({
       path: "lines",
       message: `Add 1 to ${MAX_LINES} lines`,
@@ -95,7 +111,13 @@ async function checkDraft(executor, input) {
     });
   }
 
-  const lines = rawLines.slice(0, MAX_LINES).map((line, index) => {
+  const lines = [];
+
+  rawLines.slice(0, MAX_LINES * 2).forEach((line, index) => {
+    if (blank(line)) {
+      return;
+    }
+
     const row = { index, productUnitId: line?.productUnitId };
     const quantity = typeof line?.quantity === "string" ? line.quantity.trim() : line?.quantity;
     const cost = typeof line?.unitCost === "string" ? line.unitCost.trim() : line?.unitCost;
@@ -116,7 +138,15 @@ async function checkDraft(executor, input) {
       row.unitCost = toScale(cost, 4);
     }
 
-    return row;
+    if (row.quantity && row.unitCost) {
+      row.lineTotal = toScale(mul(row.quantity, row.unitCost), 2);
+
+      if (cmp(row.lineTotal, MAX_MONEY) > 0) {
+        lineError(errors, index, "unitCost", "This line total is too large");
+      }
+    }
+
+    lines.push(row);
   });
 
   const wanted = lines
@@ -165,6 +195,14 @@ async function checkDraft(executor, input) {
     }
   }
 
+  const orderTotal = lines.reduce((total, line) => {
+    return line.lineTotal ? add(total, line.lineTotal) : total;
+  }, "0");
+
+  if (errors.length === 0 && cmp(orderTotal, MAX_MONEY) > 0) {
+    errors.push({ path: "lines", message: "The order total is too large", order: -1 });
+  }
+
   if (errors.length > 0) {
     // header problems first, then by line; the order field only sorts and is not shown
     throw new ValidationError(
@@ -181,9 +219,7 @@ async function checkDraft(executor, input) {
     );
   }
 
-  const rows = lines.map((line) => {
-    return { ...line, lineTotal: toScale(mul(line.quantity, line.unitCost), 2) };
-  });
+  const rows = lines;
 
   return {
     supplierId,

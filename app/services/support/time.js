@@ -93,6 +93,17 @@ export function eachDay(from, to) {
   return days;
 }
 
+/** True for a real calendar day written YYYY-MM-DD (2028-02-31 and 2028-13-01 are not). */
+export function isRealDay(value) {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return false;
+  }
+
+  const date = new Date(`${value}T00:00:00Z`);
+
+  return !Number.isNaN(date.getTime()) && date.toISOString().startsWith(value);
+}
+
 /** The UTC date parts of a Date (or the leading YYYY-MM-DD of a string); null when there is none. */
 export function toDateString(value) {
   if (value === null || value === undefined) {

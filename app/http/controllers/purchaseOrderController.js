@@ -15,6 +15,7 @@ import {
 import { listReceipts, postReceipt } from "../../services/purchasing/receiving.js";
 import { listSuppliers } from "../../services/purchasing/suppliers.js";
 import { sub, cmp, toScale } from "../../services/support/decimal.js";
+import { toDateString } from "../../services/support/time.js";
 import { HttpError, ValidationError } from "../errors.js";
 import {
   errorMap,
@@ -318,7 +319,7 @@ export default {
     return await orderForm(res, {
       values: {
         supplierId: order.supplierId,
-        expectedDate: order.expectedDate ? String(order.expectedDate).slice(0, 10) : "",
+        expectedDate: toDateString(order.expectedDate) ?? "",
         notes: order.notes ?? "",
       },
       lines: lines.map((line) => {

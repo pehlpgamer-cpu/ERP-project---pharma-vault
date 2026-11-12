@@ -37,6 +37,8 @@ app.use(express.json());
 app.use(
   express.urlencoded({
     extended: true,
+    // a receipt form posts about 7 fields for each of up to 200 rows
+    parameterLimit: 10000,
   }),
 );
 

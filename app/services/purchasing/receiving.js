@@ -19,13 +19,15 @@ import { recordAudit } from "../audit/auditLog.js";
 import { can, PERMISSIONS } from "../auth/permissions.js";
 import { add, cmp, div, mul, sub, toScale } from "../support/decimal.js";
 import { isDuplicateEntry } from "../support/dbErrors.js";
-import { businessDate } from "../support/time.js";
+import { businessDate, isRealDay } from "../support/time.js";
 import { nextDocumentNumber } from "./numbers.js";
 import { lockOrder } from "./purchaseOrders.js";
 
-const MAX_LINES = 100;
+// two rows per order line (a split batch) for up to 100 order lines
+const MAX_LINES = 200;
+// DECIMAL(14,3) holds 11 whole digits
+const MAX_QUANTITY = "99999999999.999";
 const QUANTITY = /^\d{1,11}(\.\d{1,3})?$/;
-const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 const duplicateReceipt = () => {
   return new HttpError(
@@ -39,13 +41,7 @@ const text = (value) => {
   return typeof value === "string" ? value.trim() : "";
 };
 
-const isDay = (value) => {
-  return (
-    typeof value === "string" &&
-    DAY.test(value) &&
-    new Date(`${value}T00:00:00Z`).toISOString().startsWith(value)
-  );
-};
+const isDay = isRealDay;
 
 const atMidnight = (day) => {
   return new Date(`${day}T00:00:00Z`);
@@ -92,7 +88,11 @@ function checkInput(input, today) {
   const errors = [];
   const invoice = text(input?.supplierInvoiceNumber);
   const notes = text(input?.notes);
-  const raw = Array.isArray(input?.lines) ? input.lines.slice(0, MAX_LINES) : [];
+  const raw = Array.isArray(input?.lines) ? input.lines : [];
+
+  if (raw.length > MAX_LINES) {
+    errors.push({ path: "lines", message: `Too many rows (at most ${MAX_LINES})`, order: -1 });
+  }
 
   if (invoice === "" || invoice.length > 100) {
     errors.push({
@@ -325,6 +325,16 @@ export async function postReceipt(user, orderId, input, { now = new Date(), meta
           if (hasStock) {
             const inventory = stock.get(item.productId);
             const before = inventory.onHand;
+
+            if (cmp(base, MAX_QUANTITY) > 0 || cmp(add(before, base), MAX_QUANTITY) > 0) {
+              raise([
+                {
+                  path: `lines.${line.index}.quantityAccepted`,
+                  message: "That much stock is too large to record",
+                  order: line.index,
+                },
+              ]);
+            }
 
             batchId = randomUUID();
             inventory.onHand = toScale(add(before, base), 3);

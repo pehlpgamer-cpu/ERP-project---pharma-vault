@@ -63,12 +63,12 @@ async function setup({ stocked = false } = {}) {
   return ctx;
 }
 
-async function sentOrder(ctx, quantity = "10") {
+async function sentOrder(ctx, quantity = "10", cost = "250.5") {
   const { id } = await createPurchaseOrder(
     ctx.clerk,
     {
       supplierId: ctx.supplier.id,
-      lines: [{ productUnitId: ctx.units[1].id, quantity, unitCost: "250.5" }],
+      lines: [{ productUnitId: ctx.units[1].id, quantity, unitCost: cost }],
     },
     { now: NOW },
   );
@@ -391,5 +391,60 @@ test.group("goods receiving", (group) => {
     expect(await db.select().from(inventoryBatches)).toHaveLength(0);
     expect((await getPurchaseOrder(ctx.clerk, ctx.orderId)).order.status).toBe("SENT");
     expect(await db.select().from(goodsReceiptItems)).toHaveLength(1);
+  });
+
+  test("impossible dates, too many rows and quantities too big for stock are refused, never a 500", async ({
+    expect,
+  }) => {
+    const ctx = await setup();
+    const line = await itemId(ctx);
+    const good = { purchaseOrderItemId: line, batchNumber: "L1", quantityAccepted: "1" };
+    const failed = async (lines) => {
+      return await failure(
+        postReceipt(ctx.clerk, ctx.orderId, receipt(line, undefined, lines), { now: NOW }),
+      );
+    };
+    const paths = (error) => {
+      return error.details.map((detail) => {
+        return detail.path;
+      });
+    };
+
+    const badDay = await failed([{ ...good, expirationDate: "2028-13-01" }]);
+    const zeroDay = await failed([{ ...good, expirationDate: "0000-00-00" }]);
+    const badMade = await failed([
+      { ...good, expirationDate: "2028-01-31", manufacturingDate: "2020-01-32" },
+    ]);
+    const tooMany = await failed(
+      Array.from({ length: 201 }, () => {
+        return { ...good, expirationDate: "2028-01-31" };
+      }),
+    );
+
+    expect(paths(badDay)).toEqual(["lines.0.expirationDate"]);
+    expect(paths(zeroDay)).toEqual(["lines.0.expirationDate"]);
+    expect(paths(badMade)).toEqual(["lines.0.manufacturingDate"]);
+    expect(paths(tooMany)).toEqual(["lines"]);
+
+    const huge = await sentOrder(ctx, "99999999999", "0");
+    const hugeLine = (await getPurchaseOrder(ctx.manager, huge)).lines[0].id;
+    const overflow = await failure(
+      postReceipt(
+        ctx.clerk,
+        huge,
+        receipt(hugeLine, undefined, [
+          {
+            purchaseOrderItemId: hugeLine,
+            batchNumber: "H1",
+            expirationDate: "2028-01-31",
+            quantityAccepted: "99999999999",
+          },
+        ]),
+        { now: NOW },
+      ),
+    );
+
+    expect(paths(overflow)).toEqual(["lines.0.quantityAccepted"]);
+    expect(await db.select().from(goodsReceipts)).toHaveLength(0);
   });
 });
