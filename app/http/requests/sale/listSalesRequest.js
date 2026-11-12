@@ -13,6 +13,10 @@ const SORTS = [
   "-invoiceNumber",
 ];
 
+// Dates outside this window are never a real filter, and years like 9999 overflow the day arithmetic.
+const FIRST_DATE = "2000-01-01";
+const LAST_DATE = "2099-12-31";
+
 const calendarDate = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Expected a date as YYYY-MM-DD")
@@ -20,7 +24,10 @@ const calendarDate = z
     const date = new Date(`${value}T00:00:00Z`);
 
     return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
-  }, "Not a real calendar date");
+  }, "Not a real calendar date")
+  .refine((value) => {
+    return value >= FIRST_DATE && value <= LAST_DATE;
+  }, `Date must be between ${FIRST_DATE} and ${LAST_DATE}`);
 
 // "COMPLETED,VOIDED" -> ["COMPLETED", "VOIDED"], each checked against the enum.
 const statusList = z

@@ -118,7 +118,7 @@ curl -b jar.txt "http://localhost:3000/api/v1/sales/summary?from=2026-11-01&to=2
 | --- | --- | --- |
 | `GET /api/v1/sales` | any `sales.view.*` | Paginated (`page`, `perPage` up to 100) and filterable (`status`, `paymentMethod`, `branchId`, `cashierId`, `from`, `to`, `q` for the invoice number), `sort` by `transactionDate`, `totalAmount` or `invoiceNumber` (prefix `-` for descending). |
 | `GET /api/v1/sales/:id` | any `sales.view.*` | Items, the batches each came from (they add up to the line's `baseQuantity`) and payments. |
-| `GET /api/v1/sales/summary` | any `sales.view.*` | Totals, daily gross, payment mix and top products for a date range; cash is net of change. |
+| `GET /api/v1/sales/summary` | any `sales.view.*` | Totals, daily gross, payment mix and top products for a date range of at most 366 days (default: the last 30); cash is net of change. Every date filter must lie between 2000-01-01 and 2099-12-31. |
 | `GET /api/v1/products?q=` | `sales.create` | Sellable products with units, prices, barcodes and the stock the branch can sell today. An exact barcode comes first with `matchedUnitId` set. |
 | `POST /api/v1/sales` | `sales.create` | Checkout. `Content-Type: application/json` and an `Idempotency-Key` header holding a UUID are required. |
 

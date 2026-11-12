@@ -1,6 +1,6 @@
 import { and, asc, count, desc, eq, exists, gte, inArray, like, lt, sql } from "drizzle-orm";
 import { db } from "../../../database/client.js";
-import { HttpError } from "../../http/errors.js";
+import { HttpError, ValidationError } from "../../http/errors.js";
 import { branches } from "../../models/branches.js";
 import { cashRegisterSessions } from "../../models/cash-register-sessions.js";
 import { cashRegisters } from "../../models/cash-registers.js";
@@ -26,6 +26,10 @@ import { salesScope } from "./scope.js";
 
 // Statuses of sales that happened. VOIDED is counted separately and PENDING not at all.
 const HAPPENED = ["COMPLETED", "PARTIALLY_REFUNDED", "REFUNDED"];
+
+// The summary lists every day of its range, so the range has to be bounded.
+const MAX_SUMMARY_DAYS = 366;
+const DAY_MS = 86_400_000;
 
 const SORT_COLUMNS = {
   transactionDate: sales.transactionDate,
@@ -401,6 +405,14 @@ export async function getSummary(filters, user, { now = new Date() } = {}) {
   const base = visibility(scope, filters);
   const to = filters.to ?? businessDate(now);
   const from = filters.from ?? addDays(to, -29);
+  const spanDays = (Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / DAY_MS + 1;
+
+  if (spanDays > MAX_SUMMARY_DAYS) {
+    throw new ValidationError([
+      { path: "from", message: `The range can span at most ${MAX_SUMMARY_DAYS} days` },
+    ]);
+  }
+
   const happened = and(
     ...base,
     ...dateRange(sales.transactionDate, from, to),
