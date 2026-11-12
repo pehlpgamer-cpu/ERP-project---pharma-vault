@@ -18,6 +18,7 @@ the day. Managers and accountants read the sales on a dashboard, in a list and t
 | `/inventory` | `inventory.view` | Stock per product: on hand, what the branch may sell today, reorder level, and low-stock, expiring (30 days) and expired-stock alerts. Users with the all-branch scope (`sales.view.all`) can pick a branch. |
 | `/inventory/batches` | `inventory.view` | Batches soonest-expiry first, filtered by status, expiry window or text. With `inventory.manage`: quarantine, release, recall and write off stock in your own branch, each with a reason; other branches are view only. |
 | `/suppliers` | `purchasing.view` | Supplier list; with `purchasing.manage` add, edit and deactivate suppliers |
+| `/stock-counts` | `inventory.view` | Stock counts in your branch (all branches with `sales.view.all`), filtered by status. With `inventory.adjust`: draft a count of batches (the books' quantity is snapshotted), submit or cancel it; with `inventory.approve`: approve (never your own count), reject or post, which sets each batch to the counted quantity and writes `STOCK_ADJUSTMENT` movements. A post is refused if a batch moved since the count. |
 | `/purchase-orders` | `purchasing.view` | Purchase orders in your branch (all branches with `sales.view.all`), filtered by status. With `purchasing.manage`: write and edit drafts, submit, send, cancel and close; with `purchasing.approve`: approve or return; with `inventory.receive`: post goods receipts. |
 | `/users` | `users.manage` | List of accounts |
 
@@ -107,6 +108,8 @@ npm run views:check     # every page, layout, partial and helper resolves; rende
 | `inventory.view` | yes | yes | | yes |
 | `inventory.manage` | yes | yes | | |
 | `inventory.receive` | yes | yes | | |
+| `inventory.adjust` | yes | yes | | |
+| `inventory.approve` | yes | | | |
 | `purchasing.view` | yes | yes | | yes |
 | `purchasing.manage` | yes | yes | | |
 | `purchasing.approve` | yes | | | |
@@ -140,7 +143,7 @@ back into sale; recall is final, takes the batch out of sale and leaves its stoc
 removes what is left, ending the batch expired or depleted, and records a stock movement. There are no
 stock counts or transfers yet, and the "expiring" horizon is a fixed 30 days.
 
-Purchasing and receiving add four permissions (`purchasing.view`, `purchasing.manage`, `purchasing.approve`, `inventory.receive`) and five tables (`suppliers`, `purchase_orders`, `purchase_order_items`, `goods_receipts`, `goods_receipt_items`). An existing database needs `npm run db:push` for the tables and a re-seed (or equivalent `INSERT`s like the ones above) for the permissions.
+Purchasing and receiving add four permissions (`purchasing.view`, `purchasing.manage`, `purchasing.approve`, `inventory.receive`) and five tables (`suppliers`, `purchase_orders`, `purchase_order_items`, `goods_receipts`, `goods_receipt_items`). An existing database needs `npm run db:push` for the tables and a re-seed (or equivalent `INSERT`s like the ones above) for the permissions. Stock counts add two more permissions (`inventory.adjust`, `inventory.approve`) and use the existing `inventory_adjustments` tables, so they need the re-seed only.
 
 A purchase order is written as a draft in the creator's branch, then submitted, approved (admin only; the creator may approve their own order) and sent. Receiving needs a sent or partly received order: each delivered line is entered as accepted and rejected quantities in the order unit (a box converts to base units with its conversion factor), with a batch number and an expiry date after today for accepted goods and a reason for rejected goods. Posting is one transaction that creates one batch per accepted line, raises on hand, writes a `PURCHASE_RECEIVED` movement and moves the order to partly or fully received. Rejected goods never become stock, receiving more than is still open on a line is refused, and one supplier invoice number can be received once per order, so a retried post creates nothing. Orders cannot be edited after they are sent; there are no supplier returns, discounts, taxes or saved receipt drafts yet.
 

@@ -13,6 +13,7 @@ import posController from "../app/http/controllers/posController.js";
 import purchaseOrderController from "../app/http/controllers/purchaseOrderController.js";
 import productController from "../app/http/controllers/productController.js";
 import salesController from "../app/http/controllers/salesController.js";
+import stockCountController from "../app/http/controllers/stockCountController.js";
 import supplierController from "../app/http/controllers/supplierController.js";
 import asyncHandler from "../app/http/middleware/asyncHandler.js";
 import canSell from "../app/http/middleware/canSell.js";
@@ -86,6 +87,45 @@ for (const [path, handler] of [
     canManageInventory,
     asyncHandler(handler),
   );
+}
+
+const canAdjustStock = requirePermission(PERMISSIONS.INVENTORY_ADJUST);
+const canApproveStock = requirePermission(PERMISSIONS.INVENTORY_APPROVE);
+
+// /stock-counts/new is registered before /stock-counts/:id so "new" is never read as an id.
+router.get(
+  "/stock-counts",
+  requireAuth,
+  canViewInventory,
+  asyncHandler(stockCountController.index),
+);
+router.get(
+  "/stock-counts/new",
+  requireAuth,
+  canAdjustStock,
+  asyncHandler(stockCountController.newForm),
+);
+router.post(
+  "/stock-counts",
+  requireAuth,
+  canAdjustStock,
+  asyncHandler(stockCountController.create),
+);
+router.get(
+  "/stock-counts/:id",
+  requireAuth,
+  canViewInventory,
+  asyncHandler(stockCountController.show),
+);
+
+for (const [path, guard, handler] of [
+  ["submit", canAdjustStock, stockCountController.submit],
+  ["cancel", canAdjustStock, stockCountController.cancel],
+  ["approve", canApproveStock, stockCountController.approve],
+  ["reject", canApproveStock, stockCountController.reject],
+  ["post", canApproveStock, stockCountController.post],
+]) {
+  router.post(`/stock-counts/:id/${path}`, requireAuth, guard, asyncHandler(handler));
 }
 
 const canViewPurchasing = requirePermission(PERMISSIONS.PURCHASING_VIEW);

@@ -28,6 +28,7 @@ const STATUS_COLORS = {
   FULLY_RECEIVED: "green",
   POSTED: "green",
   CANCELLED: "red",
+  REJECTED: "red",
 };
 
 const ENTITIES = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };

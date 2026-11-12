@@ -1,0 +1,73 @@
+{{!--
+  inventory/count: one stock count with its lines and next steps. Required: adjustment, lines,
+  canSubmit, canApprove, canReject, canPost, canCancel.
+--}}
+<div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+  {{> components/page-header title=adjustment.adjustmentNumber icon="clipboard-check"}}
+  <a href="/stock-counts" class="btn bg-gray-200"><i class="bi bi-list-ul" aria-hidden="true"></i> All counts</a>
+</div>
+
+<section class="mb-4 grid gap-3 border border-gray-200 bg-white p-4 text-sm sm:grid-cols-2 lg:grid-cols-4" aria-label="Count details">
+  <div><span class="block text-gray-500">Status</span>{{badge adjustment.status}}</div>
+  <div><span class="block text-gray-500">Branch</span>{{adjustment.branchName}}</div>
+  <div><span class="block text-gray-500">Started by</span>{{adjustment.createdByName}}</div>
+  <div><span class="block text-gray-500">Created</span>{{formatDateTime adjustment.createdAt}}</div>
+  <div><span class="block text-gray-500">Approved</span>{{#if adjustment.approvedAt}}{{formatDateTime adjustment.approvedAt}}{{else}}-{{/if}}</div>
+  <div><span class="block text-gray-500">Posted</span>{{#if adjustment.postedAt}}{{formatDateTime adjustment.postedAt}}{{else}}-{{/if}}</div>
+  <div class="sm:col-span-2"><span class="block text-gray-500">Reason</span>{{adjustment.reason}}</div>
+</section>
+
+<div class="mb-4 overflow-x-auto border border-gray-200 bg-white">
+  <table class="w-full text-left text-sm">
+    <thead class="bg-gray-50 text-gray-600">
+      <tr>
+        <th class="cell">Product</th>
+        <th class="cell">Batch</th>
+        <th class="cell text-right">On record</th>
+        <th class="cell text-right">Counted</th>
+        <th class="cell text-right">Change</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each lines}}
+      <tr class="border-t border-gray-200">
+        <td class="cell">{{productName}} <span class="text-gray-500">{{sku}}</span></td>
+        <td class="cell">{{batchNumber}} {{badge batchStatus}}</td>
+        <td class="cell text-right">{{formatNumber quantityBefore}}</td>
+        <td class="cell text-right">{{formatNumber countedQuantity}}</td>
+        <td class="cell text-right font-semibold">{{formatNumber quantityChange}}</td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+</div>
+
+<div class="flex flex-wrap items-start gap-3">
+  {{#if canSubmit}}
+  <form method="POST" action="/stock-counts/{{adjustment.id}}/submit"><button type="submit" class="btn">Submit for approval</button></form>
+  {{/if}}
+  {{#if canApprove}}
+  <form method="POST" action="/stock-counts/{{adjustment.id}}/approve"><button type="submit" class="btn">Approve</button></form>
+  {{/if}}
+  {{#if canReject}}
+  <details>
+    <summary class="btn cursor-pointer bg-gray-200">Reject</summary>
+    <form method="POST" action="/stock-counts/{{adjustment.id}}/reject" class="mt-1 flex flex-col gap-1">
+      <input type="text" name="reason" required maxlength="500" placeholder="Why it is rejected" aria-label="Reason" class="field">
+      <button type="submit" class="btn">Reject count</button>
+    </form>
+  </details>
+  {{/if}}
+  {{#if canPost}}
+  <form method="POST" action="/stock-counts/{{adjustment.id}}/post" data-confirm="Post this count? Stock on record will be set to the counted quantities."><button type="submit" class="btn">Post count</button></form>
+  {{/if}}
+  {{#if canCancel}}
+  <details>
+    <summary class="cursor-pointer text-red-700 underline">Cancel count</summary>
+    <form method="POST" action="/stock-counts/{{adjustment.id}}/cancel" class="mt-1 flex flex-col gap-1" data-confirm="Cancel this count? This cannot be undone.">
+      <input type="text" name="reason" required maxlength="500" placeholder="Reason" aria-label="Reason" class="field">
+      <button type="submit" class="btn">Cancel count</button>
+    </form>
+  </details>
+  {{/if}}
+</div>

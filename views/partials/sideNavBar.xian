@@ -22,6 +22,9 @@
   <a href="/inventory" class="nav-link {{#if (isActive currentPath "/inventory")}}nav-link-active{{/if}}">
     <i class="bi bi-boxes" aria-hidden="true"></i> Inventory
   </a>
+  <a href="/stock-counts" class="nav-link {{#if (isActive currentPath "/stock-counts")}}nav-link-active{{/if}}">
+    <i class="bi bi-clipboard-check" aria-hidden="true"></i> Stock counts
+  </a>
   {{/if}}
   {{#if (can "purchasing.view")}}
   <a href="/purchase-orders" class="nav-link {{#if (isActive currentPath "/purchase-orders")}}nav-link-active{{/if}}">

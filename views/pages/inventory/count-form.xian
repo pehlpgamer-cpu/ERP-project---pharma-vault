@@ -1,0 +1,57 @@
+{{!--
+  inventory/count-form: draft a stock count. Required: values (reason), errors (by field), lineRows, batchOptions.
+--}}
+{{> components/page-header title="New stock count" icon="clipboard-check"}}
+
+{{#if errors.lines}}
+<div class="mb-4 border border-red-300 bg-red-50 p-3 text-sm text-red-800" role="alert">{{errors.lines}}</div>
+{{/if}}
+
+<form method="POST" action="/stock-counts" class="grid gap-4" novalidate>
+  <section class="border border-gray-200 bg-white p-4" aria-labelledby="header-title">
+    <h2 id="header-title" class="mb-2 text-base font-semibold">Why</h2>
+    <label class="text-sm text-gray-700">Reason
+      <input type="text" name="reason" value="{{values.reason}}" maxlength="500" required class="field" placeholder="Quarterly count, damaged shelf, found units">
+      {{#if errors.reason}}<span class="mt-1 block text-xs text-red-700">{{errors.reason}}</span>{{/if}}
+    </label>
+  </section>
+
+  <section class="border border-gray-200 bg-white p-4" aria-labelledby="lines-title">
+    <h2 id="lines-title" class="mb-1 text-base font-semibold">Counted batches</h2>
+    <p class="mb-3 text-sm text-gray-600">Counted quantity is in base units (for example tablets). The system records what the books said now; if the stock moves before the count is posted, it must be counted again. Leave unused rows empty.</p>
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-sm">
+        <thead class="text-gray-600">
+          <tr>
+            <th class="cell">Batch</th>
+            <th class="cell">Counted</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each lineRows}}
+          <tr class="align-top">
+            <td class="cell">
+              <select name="lines[{{index}}][inventoryBatchId]" aria-label="Batch" class="field">
+                <option value="">-</option>
+                {{#each @root.batchOptions}}
+                <option value="{{id}}" {{#if (eq id ../inventoryBatchId)}}selected{{/if}}>{{label}}</option>
+                {{/each}}
+              </select>
+              {{#if errors.inventoryBatchId}}<span class="mt-1 block text-xs text-red-700">{{errors.inventoryBatchId}}</span>{{/if}}
+            </td>
+            <td class="cell">
+              <input type="text" inputmode="decimal" name="lines[{{index}}][countedQuantity]" value="{{countedQuantity}}" aria-label="Counted quantity" class="field">
+              {{#if errors.countedQuantity}}<span class="mt-1 block text-xs text-red-700">{{errors.countedQuantity}}</span>{{/if}}
+            </td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="flex gap-2">
+    <button type="submit" class="btn"><i class="bi bi-check-lg" aria-hidden="true"></i> Save draft</button>
+    <a href="/stock-counts" class="btn bg-gray-200">Cancel</a>
+  </div>
+</form>
