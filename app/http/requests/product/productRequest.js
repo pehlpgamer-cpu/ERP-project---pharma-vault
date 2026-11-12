@@ -156,6 +156,7 @@ function checkUnits(units, context) {
     return unit.isBaseUnit;
   });
   const seenUnits = new Set();
+  const seenRows = new Set();
   const seenBarcodes = new Set();
 
   if (units.length === 0) {
@@ -177,6 +178,16 @@ function checkUnits(units, context) {
   }
 
   units.forEach((unit, index) => {
+    if (unit.id !== null && seenRows.has(unit.id)) {
+      context.addIssue({
+        code: "custom",
+        path: ["units", index, "id"],
+        message: "That unit row was sent twice",
+      });
+    }
+
+    seenRows.add(unit.id);
+
     if (seenUnits.has(unit.unitId)) {
       context.addIssue({
         code: "custom",

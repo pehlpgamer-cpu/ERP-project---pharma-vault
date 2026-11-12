@@ -179,6 +179,20 @@ test.group("productRequest: refusing", () => {
     expect(paths(body({ units: eleven }))).toContain("units");
   });
 
+  test("a unit row id may appear once: a repeat could delete a unit and hide the base unit", ({
+    expect,
+  }) => {
+    const id = "44444444-4444-4444-8444-444444444444";
+    const input = body({
+      units: {
+        0: unit({ id }),
+        1: unit({ id, unitId: STRIP, isBaseUnit: undefined, conversionFactor: "50" }),
+      },
+    });
+
+    expect(paths(input)).toEqual(["units.1.id"]);
+  });
+
   test("a sellable unit needs a price of zero or more with at most 4 decimals", ({ expect }) => {
     for (const price of ["", "-1", "1.00001", "1e3", "abc", "12345678901"]) {
       expect([price, paths(body({ units: { 0: unit({ price }) } }))]).toEqual([
