@@ -23,6 +23,8 @@ routeBuilder.apiResource("/sales", salesApiController, {
   include: ["index", "show"],
   middleware: [canViewSales],
 });
+// Selling needs sales.create only: whoever rings up a sale gets its detail back.
+router.post("/sales", canSell, asyncHandler(salesApiController.store));
 
 routeBuilder.apiResource("/products", productsApiController, {
   include: ["index"],
