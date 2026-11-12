@@ -7,6 +7,7 @@ import { dirname } from "node:path";
 
 import { createXianEngine } from "./xian/index.js";
 import { registerRoutes } from "../routes/routes.js";
+import { errorHandler, notFound } from "../app/http/middleware/errorHandler.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -51,6 +52,9 @@ app.use((req, res, next) => {
 
 registerRoutes(app);
 
+app.use(notFound);
+app.use(errorHandler);
+
 export async function bootstrap() {
   const xian = await createXianEngine({
     partialsDirectory: viewDirectories.partials,
@@ -61,7 +65,7 @@ export async function bootstrap() {
 
     defaultLayout: "main",
 
-    strict: NODE_ENV === "development",
+    strict: NODE_ENV !== "production",
 
     watch: NODE_ENV === "development",
 

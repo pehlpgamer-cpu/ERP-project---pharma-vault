@@ -27,7 +27,6 @@ configure({
     { name: "feature", timeout: 20 * 1000, files: ["tests/feature/**/*.spec.js"] },
   ],
   plugins: [expect(), apiClient(process.env.TEST_BASE_URL), expectTypeOf()],
-  forceExit: true,
   teardown: [
     async () => {
       server.closeAllConnections();
