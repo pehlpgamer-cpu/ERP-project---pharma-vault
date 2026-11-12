@@ -8,8 +8,10 @@ import userController from "../app/http/controllers/userController.js";
 import authController from "../app/http/controllers/authController.js";
 import cashRegisterController from "../app/http/controllers/cashRegisterController.js";
 import dashboardController from "../app/http/controllers/dashboardController.js";
+import posController from "../app/http/controllers/posController.js";
 import salesController from "../app/http/controllers/salesController.js";
 import asyncHandler from "../app/http/middleware/asyncHandler.js";
+import canSell from "../app/http/middleware/canSell.js";
 import canViewSales from "../app/http/middleware/canViewSales.js";
 import requireAuth from "../app/http/middleware/requireAuth.js";
 import requirePermission from "../app/http/middleware/requirePermission.js";
@@ -21,6 +23,8 @@ router.get("/register-page", authController.registerPage);
 router.get("/forgot-password-page", authController.forgotPasswordPage);
 router.get("/dashboard-page", requireAuth, asyncHandler(dashboardController.index));
 router.get("/login-page", authController.loginPage);
+
+router.get("/pos-page", requireAuth, canSell, asyncHandler(posController.page));
 
 router.get("/sales", requireAuth, canViewSales, asyncHandler(salesController.index));
 router.get("/sales/:id", requireAuth, canViewSales, asyncHandler(salesController.show));

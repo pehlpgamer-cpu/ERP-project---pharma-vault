@@ -40,7 +40,8 @@ app.use(
   }),
 );
 
-app.use(express.static(path.join(process.cwd(), "public")));
+// Next to the application, not the process's working directory, so it works from anywhere.
+app.use(express.static(path.join(__dirname, "../public")));
 
 app.use(session(sessionOptions()));
 

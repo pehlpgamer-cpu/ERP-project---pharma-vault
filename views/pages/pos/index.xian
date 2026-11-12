@@ -1,0 +1,70 @@
+{{!-- pos/index: the sales screen. Required: session, config. public/js/pos.js builds the results, the cart and the payment rows; the only data it receives is data-config. --}}
+{{> components/page-header title="New sale" icon="cart-check"}}
+
+<p class="mb-3 text-sm text-gray-600">
+  <i class="bi bi-cash-stack" aria-hidden="true"></i>
+  Register {{session.registerName}} ({{session.registerCode}}) &middot; open since {{formatDateTime session.openedAt}}
+</p>
+
+<noscript>
+  <p class="mb-3 border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">The sales screen needs JavaScript.</p>
+</noscript>
+
+<div id="pos-root" data-config="{{json config}}" class="grid gap-4 lg:grid-cols-5">
+  <section class="lg:col-span-3" aria-labelledby="pos-search-title">
+    <h2 id="pos-search-title" class="sr-only">Find a product</h2>
+    <label for="pos-search" class="sr-only">Search by name or SKU, or scan a barcode</label>
+    <div class="flex gap-2">
+      <input id="pos-search" type="search" autocomplete="off" autofocus placeholder="Search by name or SKU, or scan a barcode (press / to jump here)" class="field mt-0 text-base">
+    </div>
+    <p id="pos-status" class="mt-1 min-h-5 text-xs text-gray-600" role="status" aria-live="polite"></p>
+    <ul id="pos-results" class="mt-2 space-y-2"></ul>
+  </section>
+
+  <section class="space-y-4 lg:col-span-2" aria-label="Cart and payment">
+    <div class="border border-gray-200 bg-white p-3">
+      <div class="flex items-center justify-between">
+        <h2 class="text-base font-semibold">Cart</h2>
+        <button type="button" id="pos-clear" class="text-sm text-red-700 underline">Clear</button>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="mt-2 w-full text-left">
+          <thead class="text-xs text-gray-600">
+            <tr>
+              <th class="pr-2 font-medium">Item</th>
+              <th class="pr-2 font-medium">Qty</th>
+              <th class="pr-2 text-right font-medium">Amount</th>
+              <th class="sr-only">Remove</th>
+            </tr>
+          </thead>
+          <tbody id="pos-cart-body"></tbody>
+        </table>
+      </div>
+      <p class="mt-3 flex items-baseline justify-between border-t border-gray-300 pt-2">
+        <span class="font-bold">Total</span>
+        <span id="pos-total" class="text-2xl font-bold">&#8369;0.00</span>
+      </p>
+    </div>
+
+    <div class="border border-gray-200 bg-white p-3">
+      <h2 class="text-base font-semibold">Payment</h2>
+      <div id="pos-payments" class="mt-2 space-y-2"></div>
+      <div class="mt-2 flex flex-wrap gap-2">
+        <button type="button" id="pos-add-payment" class="btn bg-gray-200 text-sm"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add payment</button>
+        <button type="button" id="pos-exact" class="btn bg-gray-200 text-sm">Exact amount</button>
+      </div>
+      <dl class="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+        <dt class="text-gray-600">Tendered</dt>
+        <dd id="pos-tendered" class="text-right">&#8369;0.00</dd>
+        <dt class="text-gray-600">Change</dt>
+        <dd id="pos-change" class="text-right font-bold">&#8369;0.00</dd>
+        <dt class="text-gray-600">Still to pay</dt>
+        <dd id="pos-remaining" class="text-right">&#8369;0.00</dd>
+      </dl>
+      <button type="button" id="pos-complete" class="btn mt-3 w-full text-base disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100 disabled:hover:bg-red-300 disabled:hover:text-inherit" disabled>Complete sale</button>
+      <p class="mt-1 text-xs text-gray-500">Ctrl+Enter completes the sale.</p>
+    </div>
+  </section>
+</div>
+
+<script type="module" src="/js/pos.js"></script>
