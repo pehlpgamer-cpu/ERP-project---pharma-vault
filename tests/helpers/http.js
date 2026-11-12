@@ -43,6 +43,11 @@ export class TestSession {
     return this.#cookies.get(name);
   }
 
+  /** Plants a cookie, for example a stale session id taken from another session. */
+  setCookie(name, value) {
+    this.#cookies.set(name, value);
+  }
+
   async request(method, path, { json, form, body, headers = {} } = {}) {
     const init = { method, redirect: "manual", headers: { ...headers } };
 
@@ -84,4 +89,21 @@ export class TestSession {
   post(path, options) {
     return this.request("POST", path, options);
   }
+}
+
+/**
+ * Signs a factory user in through the real login form and returns the session holding the cookie.
+ * Throws when the login is refused, so a broken fixture fails loudly instead of as a 302 later.
+ */
+export async function loginAs(user) {
+  const session = new TestSession();
+  const response = await session.post("/login", {
+    form: { email: user.email, password: user.password },
+  });
+
+  if (response.status !== 302 || response.location === "/login-page") {
+    throw new Error(`Login failed for ${user.email}: ${response.status} ${response.location}`);
+  }
+
+  return session;
 }

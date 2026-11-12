@@ -8,11 +8,20 @@ import { dirname } from "node:path";
 import { createXianEngine } from "./xian/index.js";
 import { registerRoutes } from "../routes/routes.js";
 import { errorHandler, notFound } from "../app/http/middleware/errorHandler.js";
+import asyncHandler from "../app/http/middleware/asyncHandler.js";
+import loadUser from "../app/http/middleware/loadUser.js";
+import { sessionOptions } from "../config/session.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const app = express();
+
+if (process.env.TRUST_PROXY) {
+  const proxies = Number(process.env.TRUST_PROXY);
+
+  app.set("trust proxy", Number.isNaN(proxies) ? process.env.TRUST_PROXY : proxies);
+}
 
 const NODE_ENV = process.env.NODE_ENV ?? "development";
 
@@ -33,13 +42,7 @@ app.use(
 
 app.use(express.static(path.join(process.cwd(), "public")));
 
-app.use(
-  session({
-    secret: process.env.SECRET_KEY ?? "development-secret",
-    resave: false,
-    saveUninitialized: false,
-  }),
-);
+app.use(session(sessionOptions()));
 
 app.use(flash());
 
@@ -49,6 +52,8 @@ app.use((req, res, next) => {
 
   next();
 });
+
+app.use(asyncHandler(loadUser));
 
 registerRoutes(app);
 
