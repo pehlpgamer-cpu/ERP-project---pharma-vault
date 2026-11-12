@@ -61,6 +61,22 @@ test.group("application shell", (group) => {
     expect(links).toEqual({ pharmacist: true, admin: true, cashier: false, accountant: false });
   });
 
+  test("the Inventory link shows for admin, pharmacist and accountant, not for cashier", async ({
+    expect,
+  }) => {
+    const links = {};
+
+    for (const role of ["pharmacist", "admin", "accountant", "cashier"]) {
+      const session = await loginAs(
+        await makeUser({ roleName: role, permissions: ROLE_PERMISSIONS[role] }),
+      );
+
+      links[role] = (await session.get("/dashboard-page", HTML)).text.includes('href="/inventory"');
+    }
+
+    expect(links).toEqual({ pharmacist: true, admin: true, accountant: true, cashier: false });
+  });
+
   test("a user without permissions sees only the dashboard link", async ({ expect }) => {
     const session = await loginAs(await makeUser());
     const response = await session.get("/dashboard-page", HTML);

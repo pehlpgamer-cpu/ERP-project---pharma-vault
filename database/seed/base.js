@@ -81,6 +81,8 @@ const PERMISSION_DESCRIPTIONS = {
   [PERMISSIONS.REGISTER_MANAGE]: "Open and close your cash register",
   [PERMISSIONS.USERS_MANAGE]: "See and manage user accounts",
   [PERMISSIONS.PRODUCTS_MANAGE]: "Create and edit products",
+  [PERMISSIONS.INVENTORY_VIEW]: "See stock levels and batches",
+  [PERMISSIONS.INVENTORY_MANAGE]: "Quarantine, recall and write off batches",
 };
 
 // DATE columns are written as UTC midnight of the day `offset` days from `now`.

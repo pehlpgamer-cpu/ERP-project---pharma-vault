@@ -7,6 +7,8 @@ export const PERMISSIONS = Object.freeze({
   REGISTER_MANAGE: "register.manage",
   USERS_MANAGE: "users.manage",
   PRODUCTS_MANAGE: "products.manage",
+  INVENTORY_VIEW: "inventory.view",
+  INVENTORY_MANAGE: "inventory.manage",
 });
 
 /** Which permissions each seeded role holds (the seed and the tests share this table). */
@@ -18,6 +20,8 @@ export const ROLE_PERMISSIONS = Object.freeze({
     PERMISSIONS.SALES_CREATE,
     PERMISSIONS.REGISTER_MANAGE,
     PERMISSIONS.PRODUCTS_MANAGE,
+    PERMISSIONS.INVENTORY_VIEW,
+    PERMISSIONS.INVENTORY_MANAGE,
   ]),
   cashier: Object.freeze([
     PERMISSIONS.DASHBOARD_VIEW,
@@ -25,7 +29,11 @@ export const ROLE_PERMISSIONS = Object.freeze({
     PERMISSIONS.SALES_CREATE,
     PERMISSIONS.REGISTER_MANAGE,
   ]),
-  accountant: Object.freeze([PERMISSIONS.DASHBOARD_VIEW, PERMISSIONS.SALES_VIEW_ALL]),
+  accountant: Object.freeze([
+    PERMISSIONS.DASHBOARD_VIEW,
+    PERMISSIONS.SALES_VIEW_ALL,
+    PERMISSIONS.INVENTORY_VIEW,
+  ]),
 });
 
 /** True when the user holds at least one of the named permissions. A null user holds none. */
