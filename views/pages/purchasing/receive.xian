@@ -1,0 +1,69 @@
+{{!--
+  purchasing/receive: post a goods receipt. Required: order, rows, values (supplierInvoiceNumber, notes), errors (by field), action.
+--}}
+{{> components/page-header title="Receive goods" icon="box-arrow-in-down" subtitle=order.poNumber}}
+
+{{#if errors.lines}}
+<div class="mb-4 border border-red-300 bg-red-50 p-3 text-sm text-red-800" role="alert">{{errors.lines}}</div>
+{{/if}}
+
+<form method="POST" action="{{action}}" class="grid gap-4" novalidate data-confirm="Post this receipt? Stock is added and the receipt cannot be edited afterwards.">
+  <section class="grid gap-3 border border-gray-200 bg-white p-4 sm:grid-cols-2" aria-labelledby="receipt-title">
+    <h2 id="receipt-title" class="text-base font-semibold sm:col-span-2">Delivery</h2>
+    <label class="text-sm text-gray-700">Supplier invoice number
+      <input type="text" name="supplierInvoiceNumber" value="{{values.supplierInvoiceNumber}}" maxlength="100" required class="field">
+      {{#if errors.supplierInvoiceNumber}}<span class="mt-1 block text-xs text-red-700">{{errors.supplierInvoiceNumber}}</span>{{/if}}
+    </label>
+    <label class="text-sm text-gray-700">Notes
+      <input type="text" name="notes" value="{{values.notes}}" maxlength="2000" class="field">
+      {{#if errors.notes}}<span class="mt-1 block text-xs text-red-700">{{errors.notes}}</span>{{/if}}
+    </label>
+  </section>
+
+  <section class="border border-gray-200 bg-white p-4" aria-labelledby="delivered-title">
+    <h2 id="delivered-title" class="mb-1 text-base font-semibold">What arrived</h2>
+    <p class="mb-3 text-sm text-gray-600">
+      Quantities are in the order unit. Accepted goods become stock; rejected goods never do and need a reason.
+      A second row for the same product is for a second manufacturer batch. Leave unused rows empty.
+    </p>
+    <div class="grid gap-3">
+      {{#each rows}}
+      <fieldset class="grid gap-2 border border-gray-200 p-3 sm:grid-cols-2 lg:grid-cols-4">
+        <legend class="px-1 text-sm font-medium">{{productName}} <span class="text-gray-500">{{sku}}</span> - {{unitName}}{{#if first}} <span class="text-gray-500">(open: {{formatNumber open}})</span>{{else}} <span class="text-gray-500">(another batch)</span>{{/if}}</legend>
+        <input type="hidden" name="lines[{{index}}][purchaseOrderItemId]" value="{{purchaseOrderItemId}}">
+        {{#if errors.purchaseOrderItemId}}<span class="text-xs text-red-700 lg:col-span-4">{{errors.purchaseOrderItemId}}</span>{{/if}}
+        <label class="text-sm text-gray-700">Batch number
+          <input type="text" name="lines[{{index}}][batchNumber]" value="{{batchNumber}}" maxlength="100" class="field">
+          {{#if errors.batchNumber}}<span class="mt-1 block text-xs text-red-700">{{errors.batchNumber}}</span>{{/if}}
+        </label>
+        <label class="text-sm text-gray-700">Expiry date
+          <input type="date" name="lines[{{index}}][expirationDate]" value="{{expirationDate}}" class="field">
+          {{#if errors.expirationDate}}<span class="mt-1 block text-xs text-red-700">{{errors.expirationDate}}</span>{{/if}}
+        </label>
+        <label class="text-sm text-gray-700">Manufactured
+          <input type="date" name="lines[{{index}}][manufacturingDate]" value="{{manufacturingDate}}" class="field">
+          {{#if errors.manufacturingDate}}<span class="mt-1 block text-xs text-red-700">{{errors.manufacturingDate}}</span>{{/if}}
+        </label>
+        <span class="hidden lg:block"></span>
+        <label class="text-sm text-gray-700">Accepted
+          <input type="text" inputmode="decimal" name="lines[{{index}}][quantityAccepted]" value="{{quantityAccepted}}" class="field">
+          {{#if errors.quantityAccepted}}<span class="mt-1 block text-xs text-red-700">{{errors.quantityAccepted}}</span>{{/if}}
+        </label>
+        <label class="text-sm text-gray-700">Rejected
+          <input type="text" inputmode="decimal" name="lines[{{index}}][quantityRejected]" value="{{quantityRejected}}" class="field">
+          {{#if errors.quantityRejected}}<span class="mt-1 block text-xs text-red-700">{{errors.quantityRejected}}</span>{{/if}}
+        </label>
+        <label class="text-sm text-gray-700 sm:col-span-2">Rejection reason
+          <input type="text" name="lines[{{index}}][rejectionReason]" value="{{rejectionReason}}" maxlength="500" class="field">
+          {{#if errors.rejectionReason}}<span class="mt-1 block text-xs text-red-700">{{errors.rejectionReason}}</span>{{/if}}
+        </label>
+      </fieldset>
+      {{/each}}
+    </div>
+  </section>
+
+  <div class="flex gap-2">
+    <button type="submit" class="btn"><i class="bi bi-check-lg" aria-hidden="true"></i> Post receipt</button>
+    <a href="/purchase-orders/{{order.id}}" class="btn bg-gray-200">Cancel</a>
+  </div>
+</form>

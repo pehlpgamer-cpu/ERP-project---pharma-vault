@@ -553,3 +553,36 @@ export async function listPurchaseOrders(user, { status, supplierId, page = 1 } 
 
   return { rows, total: n, page: pageNumber, pageSize: PAGE_SIZE };
 }
+
+const UNIT_CHOICES = 500;
+
+/** Active product units that may be purchased, for the order form: { id, label } by product name. */
+export async function listPurchasableUnits() {
+  const rows = await db
+    .select({
+      id: productUnits.id,
+      sku: products.sku,
+      productName: products.productName,
+      unitName: units.name,
+      factor: productUnits.conversionFactor,
+    })
+    .from(productUnits)
+    .innerJoin(products, eq(products.id, productUnits.productId))
+    .innerJoin(units, eq(units.id, productUnits.unitId))
+    .where(
+      and(
+        eq(productUnits.canBePurchased, true),
+        eq(productUnits.isActive, true),
+        eq(products.isActive, true),
+      ),
+    )
+    .orderBy(asc(products.productName), asc(units.name))
+    .limit(UNIT_CHOICES);
+
+  return rows.map((row) => {
+    return {
+      id: row.id,
+      label: `${row.productName} (${row.sku}) - ${row.unitName}, ${Number(row.factor)} base units`,
+    };
+  });
+}

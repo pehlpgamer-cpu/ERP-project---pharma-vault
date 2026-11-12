@@ -21,6 +21,13 @@ const STATUS_COLORS = {
   QUARANTINED: "amber",
   RECALLED: "red",
   FAILED: "red",
+  PENDING_APPROVAL: "amber",
+  APPROVED: "blue",
+  SENT: "blue",
+  PARTIALLY_RECEIVED: "amber",
+  FULLY_RECEIVED: "green",
+  POSTED: "green",
+  CANCELLED: "red",
 };
 
 const ENTITIES = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };

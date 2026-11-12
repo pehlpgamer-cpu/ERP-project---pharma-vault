@@ -5,7 +5,7 @@
 // received once per order, so a retried post is a 409 and creates nothing.
 
 import { randomUUID } from "node:crypto";
-import { and, eq, sql } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { db } from "../../../database/client.js";
 import { HttpError, ValidationError } from "../../http/errors.js";
 import { goodsReceiptItems } from "../../models/goods-receipt-items.js";
@@ -444,4 +444,19 @@ export async function postReceipt(user, orderId, input, { now = new Date(), meta
   } catch (error) {
     throw isDuplicateEntry(error) ? duplicateReceipt() : error;
   }
+}
+
+/** The receipts posted against an order, oldest first. The caller has already checked the order is visible. */
+export async function listReceipts(orderId) {
+  return await db
+    .select({
+      id: goodsReceipts.id,
+      receiptNumber: goodsReceipts.receiptNumber,
+      supplierInvoiceNumber: goodsReceipts.supplierInvoiceNumber,
+      receivedAt: goodsReceipts.receivedAt,
+      status: goodsReceipts.status,
+    })
+    .from(goodsReceipts)
+    .where(eq(goodsReceipts.purchaseOrderId, orderId))
+    .orderBy(asc(goodsReceipts.receivedAt), asc(goodsReceipts.receiptNumber));
 }

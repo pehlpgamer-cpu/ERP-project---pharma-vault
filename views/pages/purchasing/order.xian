@@ -1,0 +1,94 @@
+{{!--
+  purchasing/order: one purchase order with its lines, receipts and next steps. Required: order, lines, receipts,
+  canEdit, canSubmit, canReturn, canApprove, canSend, canCancel, canClose, canReceive.
+--}}
+<div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+  {{> components/page-header title=order.poNumber icon="cart-check"}}
+  <a href="/purchase-orders" class="btn bg-gray-200"><i class="bi bi-list-ul" aria-hidden="true"></i> All orders</a>
+</div>
+
+<section class="mb-4 grid gap-3 border border-gray-200 bg-white p-4 text-sm sm:grid-cols-2 lg:grid-cols-4" aria-label="Order details">
+  <div><span class="block text-gray-500">Status</span>{{badge order.status}}</div>
+  <div><span class="block text-gray-500">Supplier</span>{{order.supplierName}}</div>
+  <div><span class="block text-gray-500">Branch</span>{{order.branchName}}</div>
+  <div><span class="block text-gray-500">Total</span><span class="font-semibold">{{currency order.total}}</span></div>
+  <div><span class="block text-gray-500">Expected</span>{{#if order.expectedDate}}{{formatDate order.expectedDate}}{{else}}-{{/if}}</div>
+  <div><span class="block text-gray-500">Approved</span>{{#if order.approvedAt}}{{formatDateTime order.approvedAt}}{{else}}-{{/if}}</div>
+  <div><span class="block text-gray-500">Sent</span>{{#if order.sentAt}}{{formatDateTime order.sentAt}}{{else}}-{{/if}}</div>
+  {{#if order.notes}}<div class="sm:col-span-2 lg:col-span-4"><span class="block text-gray-500">Notes</span>{{order.notes}}</div>{{/if}}
+</section>
+
+<div class="mb-4 overflow-x-auto border border-gray-200 bg-white">
+  <table class="w-full text-left text-sm">
+    <thead class="bg-gray-50 text-gray-600">
+      <tr>
+        <th class="cell">Product</th>
+        <th class="cell">Unit</th>
+        <th class="cell text-right">Ordered</th>
+        <th class="cell text-right">Received</th>
+        <th class="cell text-right">Unit cost</th>
+        <th class="cell text-right">Line total</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each lines}}
+      <tr class="border-t border-gray-200">
+        <td class="cell">{{productName}} <span class="text-gray-500">{{sku}}</span></td>
+        <td class="cell">{{unitName}} <span class="text-gray-500">({{formatNumber conversionFactor}} base)</span></td>
+        <td class="cell text-right">{{formatNumber quantityOrdered}}</td>
+        <td class="cell text-right">{{formatNumber quantityReceived}}</td>
+        <td class="cell text-right">{{currency unitCost}}</td>
+        <td class="cell text-right">{{currency lineTotal}}</td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+</div>
+
+{{#if receipts.length}}
+<section class="mb-4 border border-gray-200 bg-white p-4" aria-labelledby="receipts-title">
+  <h2 id="receipts-title" class="mb-2 text-base font-semibold">Receipts</h2>
+  <ul class="text-sm">
+    {{#each receipts}}
+    <li>{{receiptNumber}} - supplier invoice {{supplierInvoiceNumber}} - {{formatDateTime receivedAt}} {{badge status}}</li>
+    {{/each}}
+  </ul>
+</section>
+{{/if}}
+
+<div class="flex flex-wrap items-start gap-3">
+  {{#if canEdit}}<a href="/purchase-orders/{{order.id}}/edit" class="btn bg-gray-200"><i class="bi bi-pencil" aria-hidden="true"></i> Edit draft</a>{{/if}}
+  {{#if canSubmit}}
+  <form method="POST" action="/purchase-orders/{{order.id}}/submit"><button type="submit" class="btn">Submit for approval</button></form>
+  {{/if}}
+  {{#if canApprove}}
+  <form method="POST" action="/purchase-orders/{{order.id}}/approve"><button type="submit" class="btn">Approve</button></form>
+  {{/if}}
+  {{#if canReturn}}
+  <details>
+    <summary class="btn cursor-pointer bg-gray-200">Return for changes</summary>
+    <form method="POST" action="/purchase-orders/{{order.id}}/return" class="mt-1 flex flex-col gap-1">
+      <input type="text" name="reason" maxlength="500" placeholder="What needs changing" aria-label="Reason" class="field">
+      <button type="submit" class="btn">Return to draft</button>
+    </form>
+  </details>
+  {{/if}}
+  {{#if canSend}}
+  <form method="POST" action="/purchase-orders/{{order.id}}/send" data-confirm="Mark this order as sent to the supplier?"><button type="submit" class="btn">Mark as sent</button></form>
+  {{/if}}
+  {{#if canReceive}}
+  <a href="/purchase-orders/{{order.id}}/receive" class="btn"><i class="bi bi-box-arrow-in-down" aria-hidden="true"></i> Receive goods</a>
+  {{/if}}
+  {{#if canClose}}
+  <form method="POST" action="/purchase-orders/{{order.id}}/close" data-confirm="Close this order? Nothing more can be received on it."><button type="submit" class="btn bg-gray-200">Close order</button></form>
+  {{/if}}
+  {{#if canCancel}}
+  <details>
+    <summary class="cursor-pointer text-red-700 underline">Cancel order</summary>
+    <form method="POST" action="/purchase-orders/{{order.id}}/cancel" class="mt-1 flex flex-col gap-1" data-confirm="Cancel this order? This cannot be undone.">
+      <input type="text" name="reason" required maxlength="500" placeholder="Reason" aria-label="Reason" class="field">
+      <button type="submit" class="btn">Cancel order</button>
+    </form>
+  </details>
+  {{/if}}
+</div>

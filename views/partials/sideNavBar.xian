@@ -23,6 +23,14 @@
     <i class="bi bi-boxes" aria-hidden="true"></i> Inventory
   </a>
   {{/if}}
+  {{#if (can "purchasing.view")}}
+  <a href="/purchase-orders" class="nav-link {{#if (isActive currentPath "/purchase-orders")}}nav-link-active{{/if}}">
+    <i class="bi bi-cart-check" aria-hidden="true"></i> Purchasing
+  </a>
+  <a href="/suppliers" class="nav-link {{#if (isActive currentPath "/suppliers")}}nav-link-active{{/if}}">
+    <i class="bi bi-truck" aria-hidden="true"></i> Suppliers
+  </a>
+  {{/if}}
   {{#if (can "products.manage")}}
   <a href="/products" class="nav-link {{#if (isActive currentPath "/products")}}nav-link-active{{/if}}">
     <i class="bi bi-capsule" aria-hidden="true"></i> Products

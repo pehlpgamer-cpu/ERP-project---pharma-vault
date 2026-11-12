@@ -1,0 +1,55 @@
+{{!-- suppliers/index: supplier list. Required: suppliers, filters, activeOptions. --}}
+<div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+  {{> components/page-header title="Suppliers" icon="truck"}}
+  {{#if (can "purchasing.manage")}}
+  <a href="/suppliers/new" class="btn"><i class="bi bi-plus-lg" aria-hidden="true"></i> New supplier</a>
+  {{/if}}
+</div>
+
+<form method="GET" action="/suppliers" class="mb-4 grid gap-3 border border-gray-200 bg-white p-3 sm:grid-cols-3">
+  <label class="text-sm text-gray-700 sm:col-span-2">Search
+    <input type="search" name="q" value="{{filters.q}}" maxlength="100" placeholder="Code or name" class="field">
+  </label>
+  <label class="text-sm text-gray-700">Status
+    <select name="active" class="field">
+      {{#each activeOptions}}
+      <option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+      {{/each}}
+    </select>
+  </label>
+  <div class="flex items-end gap-2">
+    <button type="submit" class="btn"><i class="bi bi-funnel" aria-hidden="true"></i> Filter</button>
+    <a href="/suppliers" class="btn bg-gray-200">Reset</a>
+  </div>
+</form>
+
+{{#if suppliers.length}}
+<div class="overflow-x-auto border border-gray-200 bg-white">
+  <table class="w-full text-left text-sm">
+    <thead class="bg-gray-50 text-gray-600">
+      <tr>
+        <th class="cell">Code</th>
+        <th class="cell">Name</th>
+        <th class="cell">Contact</th>
+        <th class="cell">Payment terms</th>
+        <th class="cell">Status</th>
+        <th class="cell"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each suppliers}}
+      <tr class="border-t border-gray-200">
+        <td class="cell whitespace-nowrap font-medium">{{code}}</td>
+        <td class="cell">{{name}}</td>
+        <td class="cell">{{#if contactName}}{{contactName}}{{/if}} {{#if phone}}<span class="text-gray-500">{{phone}}</span>{{/if}}</td>
+        <td class="cell">{{#if paymentTerms}}{{paymentTerms}}{{else}}<span class="text-gray-400">-</span>{{/if}}</td>
+        <td class="cell">{{#if isActive}}{{badge "ACTIVE"}}{{else}}{{badge "INACTIVE"}}{{/if}}</td>
+        <td class="cell text-right">{{#if (can "purchasing.manage")}}<a href="/suppliers/{{id}}/edit" class="text-blue-700 underline">Edit</a>{{/if}}</td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+</div>
+{{else}}
+{{> components/empty-state icon="truck" title="No suppliers found" hint="Add a supplier to start purchasing."}}
+{{/if}}
