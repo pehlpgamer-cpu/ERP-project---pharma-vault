@@ -27,15 +27,19 @@ configure({
     { name: "feature", timeout: 20 * 1000, files: ["tests/feature/**/*.spec.js"] },
   ],
   plugins: [expect(), apiClient(process.env.TEST_BASE_URL), expectTypeOf()],
-  teardown: [
-    async () => {
-      server.closeAllConnections();
-      await new Promise((resolve) => {
-        server.close(resolve);
-      });
-      await closeDb();
-    },
-  ],
 });
 
-run();
+// Always release the server and the database pool, even when the runner fails before running any
+// test (for example a spec that cannot be imported); otherwise the process would never exit.
+try {
+  await run();
+} catch (error) {
+  console.error(error);
+  process.exitCode = 1;
+} finally {
+  server.closeAllConnections();
+  await new Promise((resolve) => {
+    server.close(resolve);
+  });
+  await closeDb();
+}
