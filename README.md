@@ -15,9 +15,11 @@ the day. Managers and accountants read the sales on a dashboard, in a list and t
 | `/pos-page` | `sales.create` | Product search or barcode scan, cart, split payments with live change |
 | `/cash-register-page` | `register.manage` | Open a register with a counted float; close it against a counted drawer |
 | `/products` | `products.manage` | Product list, create and edit with units, conversion factors, barcodes and selling prices; activate or deactivate. A product with stock or sales keeps its existing units, factors and base unit. |
+| `/inventory` | `inventory.view` | Stock per product: on hand, what the branch may sell today, reorder level, and low-stock, expiring (30 days) and expired-stock alerts. Users with the all-branch scope (`sales.view.all`) can pick a branch. |
+| `/inventory/batches` | `inventory.view` | Batches soonest-expiry first, filtered by status, expiry window or text. With `inventory.manage`: quarantine, release, recall and write off stock, each with a reason. |
 | `/users` | `users.manage` | List of accounts |
 
-Products, purchasing, prescriptions, returns and stock transfers have tables in the database but no
+Purchasing and receiving, prescriptions, returns and stock transfers have tables in the database but no
 screens yet.
 
 ## Requirements
@@ -100,6 +102,8 @@ npm run views:check     # every page, layout, partial and helper resolves; rende
 | `register.manage` | yes | yes | yes | |
 | `users.manage` | yes | | | |
 | `products.manage` | yes | yes | | |
+| `inventory.view` | yes | yes | | yes |
+| `inventory.manage` | yes | yes | | |
 
 A database seeded before `products.manage` existed needs a re-seed, or this one grant (admin and pharmacist):
 
@@ -110,6 +114,25 @@ INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r JOIN permissions p ON p.name = 'products.manage'
 WHERE r.name IN ('admin', 'pharmacist');
 ```
+
+A database seeded before `inventory.view` and `inventory.manage` existed needs a re-seed, or these grants (`inventory.view` to admin, pharmacist and accountant; `inventory.manage` to admin and pharmacist):
+
+```sql
+INSERT INTO permissions (id, name, description) VALUES
+  (UUID(), 'inventory.view', 'See stock levels and batches'),
+  (UUID(), 'inventory.manage', 'Quarantine, recall and write off batches');
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r JOIN permissions p ON p.name = 'inventory.view'
+WHERE r.name IN ('admin', 'pharmacist', 'accountant');
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r JOIN permissions p ON p.name = 'inventory.manage'
+WHERE r.name IN ('admin', 'pharmacist');
+```
+
+Batch actions: quarantine (active to quarantined) and release (back to active) take a batch out of and
+back into sale; recall is final and keeps the stock on the books until it is written off; a write-off
+removes what is left, ending the batch expired or depleted, and records a stock movement. There are no
+stock counts, receiving or transfers yet, and the "expiring" horizon is a fixed 30 days.
 
 A sales scope of `all` beats `branch`, which beats `own`. A sale outside the caller's scope answers
 404, as if it did not exist.
