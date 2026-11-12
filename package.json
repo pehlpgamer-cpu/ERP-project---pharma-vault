@@ -34,7 +34,8 @@
     "dep:matrix": "npx dependency-cruiser -T html -f dependency-matrix.html app database routes tests config src",
     "db:push": "drizzle-kit push",
     "db:push:test": "node --env-file=.env.test node_modules/drizzle-kit/bin.cjs push",
-    "views:check": "node scripts/check-views.mjs"
+    "views:check": "node scripts/check-views.mjs",
+    "db:seed": "node database/seed/index.js"
   },
   "dependencies": {
     "argon2": "^0.45.1",
