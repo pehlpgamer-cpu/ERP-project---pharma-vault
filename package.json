@@ -27,11 +27,15 @@
     "fmt:check": "oxfmt --check",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
-    "test": "node bin/test.js; npm run test:dep",
+    "test": "node bin/test.js",
     "dep:check": "npx dependency-cruiser app database routes tests config src",
     "dep:svg": "npx dependency-cruiser src app views routes database config --output-type dot | dot -T svg > dependency-graph.svg",
     "dep:report": "npx dependency-cruiser --config --output-type err-html -f dependency-report.html app database routes tests config src",
-    "dep:matrix": "npx dependency-cruiser -T html -f dependency-matrix.html app database routes tests config src"
+    "dep:matrix": "npx dependency-cruiser -T html -f dependency-matrix.html app database routes tests config src",
+    "db:push": "drizzle-kit push",
+    "db:push:test": "node --env-file=.env.test node_modules/drizzle-kit/bin.cjs push",
+    "views:check": "node scripts/check-views.mjs",
+    "db:seed": "node database/seed/index.js"
   },
   "dependencies": {
     "argon2": "^0.45.1",

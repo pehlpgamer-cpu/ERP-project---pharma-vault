@@ -5,6 +5,6 @@
     <input type="email" name="email" placeholder="Email" class="mb-2 p-2 border rounded" required />
     <input type="password" name="password" placeholder="Password" class="mb-2 p-2 border rounded" required />
     <button type="submit" class="bg-green-500 text-white p-2 rounded">Register</button>
-    <a href="/login" class="text-blue-700 mt-2 text-center">Already have an account? Login</a>
+    <a href="/login-page" class="text-blue-700 mt-2 text-center">Already have an account? Login</a>
   </form>
 </div>

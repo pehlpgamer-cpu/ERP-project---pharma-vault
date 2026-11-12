@@ -40,7 +40,7 @@ export const stockTransfers = t.mysqlTable(
           columns: [table.sourceBranchId],
           foreignColumns: [branches.id],
         })
-        .onUpdate("cascade")
+        .onUpdate("restrict")
         .onDelete("restrict"),
       t
         .foreignKey({
@@ -48,7 +48,7 @@ export const stockTransfers = t.mysqlTable(
           columns: [table.destinationBranchId],
           foreignColumns: [branches.id],
         })
-        .onUpdate("cascade")
+        .onUpdate("restrict")
         .onDelete("restrict"),
       t
         .foreignKey({
@@ -66,6 +66,8 @@ export const stockTransfers = t.mysqlTable(
         })
         .onUpdate("cascade")
         .onDelete("set null"),
+      // MySQL rejects a CHECK on columns whose foreign key has ON UPDATE CASCADE,
+      // so the two branch foreign keys above restrict updates instead (ids are never updated).
       t.check(
         "chk_transfer_branches",
         sql`${table.sourceBranchId} <> ${table.destinationBranchId}`,

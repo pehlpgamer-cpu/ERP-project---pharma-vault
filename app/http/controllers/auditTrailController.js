@@ -1,36 +1,14 @@
-//import { Audittrail, sequelize } from "../../models/Audittrail.js";
+import notImplemented from "../support/notImplemented.js";
 
+// The audit trail page is not built yet (rows are written by the services). The route is not
+// registered; these handlers answer 501 if someone wires it up before it exists.
 export default {
-  show: async (req, res) => 
-  {
-    //
-  },
-  index: async (req, res) => 
-  {
-    //
-  },
-  store: async (req, res) => 
-  {
-    //
-  },
-  update: async (req, res) => 
-  {
-    //
-  },
-  replace: async (req, res) => 
-  {
-    //
-  },
-  destroy: async (req, res) => 
-  {
-    //
-  },
-  create: async (req, res) => 
-  {
-    //page
-  },
-  edit: async (req, res) => 
-  {
-    //page
-  },
+  index: notImplemented,
+  show: notImplemented,
+  store: notImplemented,
+  update: notImplemented,
+  replace: notImplemented,
+  destroy: notImplemented,
+  create: notImplemented,
+  edit: notImplemented,
 };

@@ -36,6 +36,8 @@ import { dispensingItems } from "../dispensing-items.js";
 import { salesReturns } from "../sales-returns.js";
 import { salesReturnItems } from "../sales-return-items.js";
 import { refunds } from "../refunds.js";
+import { productPrices } from "../product-prices.js";
+import { documentSequences } from "../document-sequences.js";
 
 export const relations = defineRelations(
   {
@@ -76,6 +78,8 @@ export const relations = defineRelations(
     salesReturns,
     salesReturnItems,
     refunds,
+    productPrices,
+    documentSequences,
   },
   (r) => {
     return {
@@ -454,6 +458,10 @@ export const relations = defineRelations(
           from: r.productUnits.id,
           to: r.productBarcodes.productUnitId,
         }),
+        prices: r.many.productPrices({
+          from: r.productUnits.id,
+          to: r.productPrices.productUnitId,
+        }),
       },
       productBarcodes: {
         productUnit: r.one.productUnits({
@@ -461,6 +469,14 @@ export const relations = defineRelations(
           to: r.productUnits.id,
           optional: false,
         }),
+      },
+      productPrices: {
+        productUnit: r.one.productUnits({
+          from: r.productPrices.productUnitId,
+          to: r.productUnits.id,
+          optional: false,
+        }),
+        branch: r.one.branches({ from: r.productPrices.branchId, to: r.branches.id }),
       },
       stockTransfers: {
         items: r.many.stockTransferItems({

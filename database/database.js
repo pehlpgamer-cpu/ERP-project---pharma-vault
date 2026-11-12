@@ -1,12 +1,2 @@
-import 'dotenv/config';
-import { drizzle } from "drizzle-orm/mysql2";
-import { relations } from '../app/models/relations/relations';
-
-const mysqlUrl =
-    `mysql://${process.env.PROD_MYSQL_USER}:` + 
-    `${process.env.MYSQL_PASSWORD}@` +
-    `${process.env.MYSQL_HOST}:` +
-    `${process.env.MYSQL_PORT}/` +
-    `${process.env.MYSQL_NAME}`;
-
-const mysqlDb = drizzle(mysqlUrl, {relations});
+// Kept so older imports keep working; the pooled client lives in ./client.js.
+export { db, pool, closeDb } from "./client.js";

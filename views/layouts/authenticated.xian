@@ -1,11 +1,60 @@
+{{!-- authenticated layout: the app shell for signed-in users. Needs currentUser and currentPath (set by the loadUser middleware). --}}
 {{>head}}
 
-<body class="bg-green-100">
-    <aside>
-        {{>sideNavBar}}
+<body class="bg-gray-50 text-gray-900">
+  <div class="flex min-h-screen">
+    <aside id="app-sidebar" class="fixed inset-y-0 left-0 z-30 hidden w-60 shrink-0 flex-col border-r border-gray-200 bg-white md:static md:flex">
+      <a href="/dashboard-page" class="bg-default flex items-center gap-2 border-b border-gray-200 px-4 py-3 text-xl font-bold">
+        <i class="bi bi-fire text-red-600" aria-hidden="true"></i>
+        XIANFIRE
+      </a>
+      {{>sideNavBar}}
     </aside>
-    <main>
+    <div class="flex min-w-0 flex-1 flex-col">
+      <header id="app-header" class="flex items-center gap-3 border-b border-gray-200 bg-white px-4 py-2">
+        <button type="button" id="nav-toggle" class="btn md:hidden" aria-label="Toggle navigation" aria-controls="app-sidebar">
+          <i class="bi bi-list" aria-hidden="true"></i>
+        </button>
+        <div class="flex-1"></div>
+        <div class="text-right text-sm leading-tight">
+          <p class="font-medium">{{currentUser.name}}</p>
+          {{#if currentUser.branchName}}
+          <p class="text-gray-500">{{currentUser.branchName}}</p>
+          {{/if}}
+        </div>
+        <i class="bi bi-person-circle text-2xl text-gray-500" aria-hidden="true"></i>
+      </header>
+      <main class="flex-1 p-4">
         {{{body}}}
-    </main>
+      </main>
+      <div id="app-footer">
+        {{>footer}}
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      const button = document.getElementById('nav-toggle');
+      const sidebar = document.getElementById('app-sidebar');
+      if (!button || !sidebar) return;
+      button.addEventListener('click', () => {
+        sidebar.classList.toggle('hidden');
+        sidebar.classList.toggle('flex');
+      });
+    })();
+  </script>
+  <style type="text/tailwindcss">
+  {{>css/base}}
+  @layer components {
+    .nav-link { @apply flex items-center gap-2 rounded px-3 py-2 text-sm text-gray-700 hover:bg-red-50 hover:text-red-700; }
+    .nav-link-active { @apply bg-red-100 font-semibold text-red-800; }
+  }
+  /* A printed receipt is the receipt only: no navigation, header or footer around it. */
+  @media print {
+    #app-sidebar, #app-header, #app-footer, .no-print { display: none !important; }
+    main { padding: 0 !important; }
+  }
+  </style>
 </body>
 </html>

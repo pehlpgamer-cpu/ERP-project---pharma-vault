@@ -1,25 +1,18 @@
 import * as z from "zod";
+import { parse } from "../validate.js";
+
+const Login = z.object({
+  email: z.email().max(255),
+  password: z.string().min(1).max(128),
+});
+
 /**
- * @param {object} req // Express.js
- * @returns {object}
+ * Validates the login form body. Throws ValidationError. The password is never trimmed.
+ * @param {object} body
+ * @returns {{ email: string, password: string }}
  */
-export const loginRequest = (req) => {
-  const data = {
-    email: req.body.email,
-    password: req.body.password,
-  };
+export function loginRequest(body) {
+  const email = typeof body?.email === "string" ? body.email.trim() : body?.email;
 
-  const Login = z.object({
-    email: z.string(),
-    password: z.string(),
-  });
-
-  try {
-    Login.parse(data);
-    return data;
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return error.issues;
-    }
-  }
-};
+  return parse(Login, { email, password: body?.password });
+}

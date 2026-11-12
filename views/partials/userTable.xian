@@ -1,27 +1,36 @@
-<table class="table-auto border bg-white">
-    <thead>
-        <tr>
-            <th class="tableCell">Id</th>
-            <th class="tableCell">Username</th>
-            <th class="tableCell">Email</th>
-            <th class="tableCell">Role</th>
-            <th class="tableCell">Actions</th>
-        </tr>
+{{!-- userTable. Required: users = [{ id, name, email, branchName, roles, isActive }] (branchName may be null). --}}
+<div class="overflow-x-auto border border-gray-200 bg-white">
+  <table class="w-full table-auto text-left text-sm">
+    <thead class="bg-gray-50 text-gray-600">
+      <tr>
+        <th class="tableCell">Name</th>
+        <th class="tableCell">Email</th>
+        <th class="tableCell">Branch</th>
+        <th class="tableCell">Roles</th>
+        <th class="tableCell">Status</th>
+      </tr>
     </thead>
     <tbody>
-        {{#each users}}
-        <tr>
-            <td class="tableCell">{{id}}</td>
-            <td class="tableCell">{{username}}</td>
-            <td class="tableCell">{{email}}</td>
-            <td class="tableCell">{{role}}</td>
-            <td class="tableCell">delete/edit</td>
-        </tr>
-        {{/each}}
+      {{#each users}}
+      <tr>
+        <td class="tableCell">{{name}}</td>
+        <td class="tableCell">{{email}}</td>
+        <td class="tableCell">
+          {{#if branchName}}{{branchName}}{{else}}<span class="text-gray-400">None</span>{{/if}}
+        </td>
+        <td class="tableCell">
+          {{#each roles}}<span class="mr-1 rounded bg-gray-100 px-2 py-0.5 text-xs">{{this}}</span>{{else}}<span class="text-gray-400">No role</span>{{/each}}
+        </td>
+        <td class="tableCell">
+          {{#if isActive}}{{badge "ACTIVE"}}{{else}}{{badge "INACTIVE"}}{{/if}}
+        </td>
+      </tr>
+      {{/each}}
     </tbody>
-</table>
+  </table>
+</div>
 <style type="text/tailwindcss">
-    .tableCell {
-        @apply border p-1 
-    }
+  @layer components {
+    .tableCell { @apply border-b border-gray-200 px-3 py-2; }
+  }
 </style>

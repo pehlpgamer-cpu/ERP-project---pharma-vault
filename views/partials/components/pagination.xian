@@ -1,0 +1,41 @@
+{{!--
+  components/pagination. Required: pagination = { meta: { page, totalPages, total }, prevUrl, nextUrl, pages: [{ number, url, current }] }
+  (the object returned by paginate() in app/http/support/pagination.js). Prints nothing for a single page.
+--}}
+{{#if (gt pagination.meta.totalPages 1)}}
+<nav class="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm" aria-label="Pagination">
+  <p class="text-gray-600">Page {{pagination.meta.page}} of {{pagination.meta.totalPages}} &middot; {{pagination.meta.total}} results</p>
+  <ul class="flex items-center gap-1">
+    <li>
+      {{#if pagination.prevUrl}}
+      <a href="{{pagination.prevUrl}}" class="page-link" aria-label="Previous page"><i class="bi bi-chevron-left" aria-hidden="true"></i></a>
+      {{else}}
+      <span class="page-link page-link-disabled" aria-hidden="true"><i class="bi bi-chevron-left"></i></span>
+      {{/if}}
+    </li>
+    {{#each pagination.pages}}
+    <li>
+      {{#if current}}
+      <span class="page-link page-link-current" aria-current="page">{{number}}</span>
+      {{else}}
+      <a href="{{url}}" class="page-link">{{number}}</a>
+      {{/if}}
+    </li>
+    {{/each}}
+    <li>
+      {{#if pagination.nextUrl}}
+      <a href="{{pagination.nextUrl}}" class="page-link" aria-label="Next page"><i class="bi bi-chevron-right" aria-hidden="true"></i></a>
+      {{else}}
+      <span class="page-link page-link-disabled" aria-hidden="true"><i class="bi bi-chevron-right"></i></span>
+      {{/if}}
+    </li>
+  </ul>
+</nav>
+<style type="text/tailwindcss">
+  @layer components {
+    .page-link { @apply inline-flex min-w-8 items-center justify-center rounded border border-gray-300 bg-white px-2 py-1 text-gray-700 hover:bg-gray-100; }
+    .page-link-current { @apply border-red-600 bg-red-600 text-white hover:bg-red-600; }
+    .page-link-disabled { @apply cursor-not-allowed text-gray-300 hover:bg-white; }
+  }
+</style>
+{{/if}}

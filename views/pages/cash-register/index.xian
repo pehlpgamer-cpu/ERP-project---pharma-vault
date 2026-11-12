@@ -1,0 +1,72 @@
+{{!-- cash-register/index: the cashier's register. Required: session, summary, registers, threshold. --}}
+{{> components/page-header title="Cash register" icon="cash-stack"}}
+
+{{#if session}}
+<div class="grid gap-4 lg:grid-cols-2">
+  <section class="border border-gray-200 bg-white p-4" aria-labelledby="session-title">
+    <h2 id="session-title" class="text-base font-semibold">Open session</h2>
+    <p class="text-sm text-gray-600">{{session.registerName}} ({{session.registerCode}}) &middot; opened {{formatDateTime session.openedAt}}</p>
+    <dl class="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+      <dt class="text-gray-600">Opening cash</dt>
+      <dd class="text-right">{{currency summary.openingCash}}</dd>
+      <dt class="text-gray-600">Cash sales</dt>
+      <dd class="text-right">{{currency summary.cashSales}}</dd>
+      <dt class="text-gray-600">Cash in</dt>
+      <dd class="text-right">{{currency summary.cashIn}}</dd>
+      <dt class="text-gray-600">Cash out</dt>
+      <dd class="text-right">-{{currency summary.cashOut}}</dd>
+      <dt class="text-gray-600">Cash refunds</dt>
+      <dd class="text-right">-{{currency summary.cashRefunds}}</dd>
+      <dt class="border-t border-gray-300 pt-1 font-bold">Expected cash</dt>
+      <dd class="border-t border-gray-300 pt-1 text-right font-bold">{{currency summary.expectedCash}}</dd>
+      <dt class="pt-2 text-gray-600">Sales made</dt>
+      <dd class="pt-2 text-right">{{summary.salesCount}}</dd>
+    </dl>
+    <p class="mt-3 text-sm">
+      <a href="/pos-page" class="text-red-700 underline">Go to the sales screen</a>
+    </p>
+  </section>
+
+  <section class="border border-gray-200 bg-white p-4" aria-labelledby="close-title">
+    <h2 id="close-title" class="text-base font-semibold">Close register</h2>
+    <p class="text-sm text-gray-600">Count the drawer, then enter the total. No more sales can be rung up on this register afterwards.</p>
+    <form method="POST" action="/cash-register/close" class="mt-3 grid gap-3" data-confirm="Close this register? You cannot add sales to it afterwards." data-confirm-button="Close register">
+      <label class="text-sm text-gray-700">Counted cash
+        <input type="number" name="countedCash" min="0" step="0.01" inputmode="decimal" required autocomplete="off" class="field">
+      </label>
+      <label class="text-sm text-gray-700">Note
+        <textarea name="note" rows="3" maxlength="500" class="field" placeholder="Required when the count is more than {{currency threshold}} over or short"></textarea>
+      </label>
+      <div>
+        <button type="submit" class="btn"><i class="bi bi-lock" aria-hidden="true"></i> Close register</button>
+      </div>
+    </form>
+  </section>
+</div>
+{{else}}
+<section class="max-w-xl border border-gray-200 bg-white p-4" aria-labelledby="open-title">
+  <h2 id="open-title" class="text-base font-semibold">Open a register</h2>
+  {{#if registers.length}}
+  <p class="text-sm text-gray-600">Choose a register and enter the cash you counted into the drawer.</p>
+  <form method="POST" action="/cash-register/open" class="mt-3 grid gap-3">
+    <label class="text-sm text-gray-700">Register
+      <select name="registerId" required class="field">
+        {{#each registers}}
+        <option value="{{id}}">{{name}} ({{registerCode}})</option>
+        {{/each}}
+      </select>
+    </label>
+    <label class="text-sm text-gray-700">Opening cash
+      <input type="number" name="openingCash" min="0" step="0.01" value="0.00" inputmode="decimal" required autocomplete="off" class="field">
+    </label>
+    <div>
+      <button type="submit" class="btn"><i class="bi bi-unlock" aria-hidden="true"></i> Open register</button>
+    </div>
+  </form>
+  {{else}}
+  <div class="mt-3">
+    {{> components/empty-state icon="cash-stack" title="No register is free" hint="Every register at your branch is open or switched off. Ask a manager."}}
+  </div>
+  {{/if}}
+</section>
+{{/if}}

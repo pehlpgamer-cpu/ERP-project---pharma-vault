@@ -1,0 +1,10 @@
+{{!-- components/page-header: the title row of a page. Required: title, icon. Optional: subtitle. --}}
+<header class="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1">
+  <h1 class="inline-flex items-center gap-2 text-2xl font-bold">
+    <i class="bi bi-{{icon}}" aria-hidden="true"></i>
+    {{title}}
+  </h1>
+  {{#if subtitle}}
+  <p class="text-gray-600">{{subtitle}}</p>
+  {{/if}}
+</header>
