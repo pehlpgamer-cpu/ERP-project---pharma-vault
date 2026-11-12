@@ -1,6 +1,6 @@
-<section class="border bg-white flex flex-col items-center p-3 h-full gap-2">
-    <h1>
-        USER INDEX!
-    </h1>
-    {{>userTable}}
-</section>
+{{> components/page-header title="Users" icon="people" subtitle="Accounts that can sign in"}}
+{{#if users.length}}
+  {{>userTable}}
+{{else}}
+  {{> components/empty-state icon="people" title="No users yet"}}
+{{/if}}

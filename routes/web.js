@@ -9,7 +9,8 @@ import authController from "../app/http/controllers/authController.js";
 import dashboardController from "../app/http/controllers/dashboardController.js";
 import asyncHandler from "../app/http/middleware/asyncHandler.js";
 import requireAuth from "../app/http/middleware/requireAuth.js";
-import auditTrailController from "../app/http/controllers/auditTrailController.js";
+import requirePermission from "../app/http/middleware/requirePermission.js";
+import { PERMISSIONS } from "../app/services/auth/permissions.js";
 
 router.get("/", homePage);
 
@@ -23,6 +24,8 @@ router.post("/register", asyncHandler(authController.register));
 router.post("/logout", asyncHandler(authController.logout));
 
 
-routeBuilder.resource("/users", userController)
-routeBuilder.resource("/audit-trail", auditTrailController)
+routeBuilder.resource("/users", userController, {
+  include: ["index"],
+  middleware: [requireAuth, requirePermission(PERMISSIONS.USERS_MANAGE)],
+});
 export default router;
