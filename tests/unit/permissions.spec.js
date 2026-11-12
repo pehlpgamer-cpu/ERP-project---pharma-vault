@@ -2,7 +2,7 @@ import { test } from "@japa/runner";
 import { can, PERMISSIONS, ROLE_PERMISSIONS } from "../../app/services/auth/permissions.js";
 
 test.group("permissions", () => {
-  test("PERMISSIONS holds exactly the sixteen names", ({ expect }) => {
+  test("PERMISSIONS holds exactly the eighteen names", ({ expect }) => {
     expect(Object.values(PERMISSIONS).sort()).toEqual([
       "dashboard.view",
       "inventory.adjust",
@@ -15,6 +15,8 @@ test.group("permissions", () => {
       "purchasing.manage",
       "purchasing.view",
       "register.manage",
+      "returns.approve",
+      "returns.create",
       "sales.create",
       "sales.view.all",
       "sales.view.branch",
@@ -30,13 +32,25 @@ test.group("permissions", () => {
     expect(can(null, "a")).toBe(false);
   });
 
-  test("the cashier role has exactly four permissions", ({ expect }) => {
+  test("the cashier role has exactly five permissions", ({ expect }) => {
     expect(ROLE_PERMISSIONS.cashier).toEqual([
       "dashboard.view",
       "sales.view.own",
       "sales.create",
       "register.manage",
+      "returns.create",
     ]);
+  });
+
+  test("returns: everyone who sells may start one, only admin and pharmacist may approve", ({
+    expect,
+  }) => {
+    expect(ROLE_PERMISSIONS.admin).toContain("returns.approve");
+    expect(ROLE_PERMISSIONS.pharmacist).toContain("returns.approve");
+    expect(ROLE_PERMISSIONS.pharmacist).toContain("returns.create");
+    expect(ROLE_PERMISSIONS.cashier).not.toContain("returns.approve");
+    expect(ROLE_PERMISSIONS.accountant).not.toContain("returns.create");
+    expect(ROLE_PERMISSIONS.accountant).not.toContain("returns.approve");
   });
 
   test("only admin and pharmacist may manage products", ({ expect }) => {
@@ -64,6 +78,8 @@ test.group("permissions", () => {
       "inventory.adjust",
       "purchasing.view",
       "purchasing.manage",
+      "returns.create",
+      "returns.approve",
     ]);
     expect(ROLE_PERMISSIONS.admin).toContain("inventory.approve");
     expect(ROLE_PERMISSIONS.pharmacist).not.toContain("inventory.approve");
