@@ -113,7 +113,11 @@ test.group("user services", (group) => {
 
     const list = await listUsers();
 
-    expect(list.map((user) => user.name)).toEqual(["Ana", "Zed"]);
+    expect(
+      list.map((user) => {
+        return user.name;
+      }),
+    ).toEqual(["Ana", "Zed"]);
     expect(list[0]).toMatchObject({
       branchName: "Main Branch",
       roles: ["cashier"],
@@ -159,6 +163,12 @@ test.group("audit log", (group) => {
 
     expect(meta.userAgent).toBe("TestAgent/1.0");
     expect(meta.ipAddress).toHaveLength(45);
-    expect(requestMeta({ get: () => undefined })).toEqual({ ipAddress: null, userAgent: null });
+    const bare = {
+      get() {
+        return undefined;
+      },
+    };
+
+    expect(requestMeta(bare)).toEqual({ ipAddress: null, userAgent: null });
   });
 });
