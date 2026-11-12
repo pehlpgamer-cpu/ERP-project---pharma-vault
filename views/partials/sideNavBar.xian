@@ -18,6 +18,11 @@
     <i class="bi bi-cash-stack" aria-hidden="true"></i> Cash register
   </a>
   {{/if}}
+  {{#if (can "products.manage")}}
+  <a href="/products" class="nav-link {{#if (isActive currentPath "/products")}}nav-link-active{{/if}}">
+    <i class="bi bi-capsule" aria-hidden="true"></i> Products
+  </a>
+  {{/if}}
   {{#if (can "users.manage")}}
   <a href="/users" class="nav-link {{#if (isActive currentPath "/users")}}nav-link-active{{/if}}">
     <i class="bi bi-people" aria-hidden="true"></i> Users

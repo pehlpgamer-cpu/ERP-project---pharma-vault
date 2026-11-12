@@ -2,9 +2,10 @@ import { test } from "@japa/runner";
 import { can, PERMISSIONS, ROLE_PERMISSIONS } from "../../app/services/auth/permissions.js";
 
 test.group("permissions", () => {
-  test("PERMISSIONS holds exactly the seven names", ({ expect }) => {
+  test("PERMISSIONS holds exactly the eight names", ({ expect }) => {
     expect(Object.values(PERMISSIONS).sort()).toEqual([
       "dashboard.view",
+      "products.manage",
       "register.manage",
       "sales.create",
       "sales.view.all",
@@ -30,7 +31,15 @@ test.group("permissions", () => {
     ]);
   });
 
-  test("the admin role has all seven permissions", ({ expect }) => {
+  test("only admin and pharmacist may manage products", ({ expect }) => {
+    expect(PERMISSIONS.PRODUCTS_MANAGE).toBe("products.manage");
+    expect(ROLE_PERMISSIONS.admin).toContain("products.manage");
+    expect(ROLE_PERMISSIONS.pharmacist).toContain("products.manage");
+    expect(ROLE_PERMISSIONS.cashier).not.toContain("products.manage");
+    expect(ROLE_PERMISSIONS.accountant).not.toContain("products.manage");
+  });
+
+  test("the admin role has all eight permissions", ({ expect }) => {
     expect([...ROLE_PERMISSIONS.admin].sort()).toEqual(Object.values(PERMISSIONS).sort());
   });
 
@@ -40,6 +49,7 @@ test.group("permissions", () => {
       "sales.view.branch",
       "sales.create",
       "register.manage",
+      "products.manage",
     ]);
     expect(ROLE_PERMISSIONS.accountant).toEqual(["dashboard.view", "sales.view.all"]);
   });
