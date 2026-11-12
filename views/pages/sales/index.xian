@@ -1,0 +1,111 @@
+{{> components/page-header title="Sales" icon="receipt"}}
+
+{{#if filterErrors.length}}
+<div class="mb-4 border border-red-300 bg-red-50 p-3 text-sm text-red-800" role="alert">
+  <p class="font-medium">Some filters were not applied</p>
+  <ul class="list-inside list-disc">
+    {{#each filterErrors}}
+    <li>{{this}}</li>
+    {{/each}}
+  </ul>
+</div>
+{{/if}}
+
+<form method="GET" action="/sales" class="mb-4 grid gap-3 border border-gray-200 bg-white p-3 sm:grid-cols-2 lg:grid-cols-4">
+  <label class="text-sm text-gray-700">From
+    <input type="date" name="from" value="{{filters.from}}" class="field">
+  </label>
+  <label class="text-sm text-gray-700">To
+    <input type="date" name="to" value="{{filters.to}}" class="field">
+  </label>
+  <label class="text-sm text-gray-700">Status
+    <select name="status" class="field">
+      {{#each statusOptions}}
+      <option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+      {{/each}}
+    </select>
+  </label>
+  <label class="text-sm text-gray-700">Payment
+    <select name="paymentMethod" class="field">
+      {{#each paymentMethodOptions}}
+      <option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+      {{/each}}
+    </select>
+  </label>
+  {{#if branches.length}}
+  <label class="text-sm text-gray-700">Branch
+    <select name="branchId" class="field">
+      <option value="">All branches</option>
+      {{#each branches}}
+      <option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>
+      {{/each}}
+    </select>
+  </label>
+  {{/if}}
+  {{#if cashiers.length}}
+  <label class="text-sm text-gray-700">Cashier
+    <select name="cashierId" class="field">
+      <option value="">All cashiers</option>
+      {{#each cashiers}}
+      <option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>
+      {{/each}}
+    </select>
+  </label>
+  {{/if}}
+  <label class="text-sm text-gray-700 sm:col-span-2">Invoice number
+    <input type="search" name="q" value="{{filters.q}}" maxlength="100" placeholder="MAIN-20261112-0001" class="field">
+  </label>
+  <div class="flex items-end gap-2">
+    <button type="submit" class="btn"><i class="bi bi-funnel" aria-hidden="true"></i> Filter</button>
+    <a href="/sales" class="btn bg-gray-200">Reset</a>
+  </div>
+  <p class="flex flex-wrap items-center gap-3 text-sm text-gray-600 sm:col-span-2 lg:col-span-4">
+    Quick ranges:
+    {{#each presets}}
+    <a href="{{url}}" class="underline">{{label}}</a>
+    {{/each}}
+  </p>
+</form>
+
+{{#if sales.length}}
+<div class="overflow-x-auto border border-gray-200 bg-white">
+  <table class="w-full text-left text-sm">
+    <thead class="bg-gray-50 text-gray-600">
+      <tr>
+        <th class="cell">Invoice</th>
+        <th class="cell">Date</th>
+        <th class="cell">Cashier</th>
+        <th class="cell">Customer</th>
+        <th class="cell text-right">Items</th>
+        <th class="cell">Payment</th>
+        <th class="cell text-right">Total</th>
+        <th class="cell">Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each sales}}
+      <tr class="border-t border-gray-200">
+        <td class="cell"><a href="/sales/{{id}}" class="font-medium text-red-700 underline">{{invoiceNumber}}</a></td>
+        <td class="cell whitespace-nowrap">{{formatDateTime transactionDate}}</td>
+        <td class="cell">{{cashier.name}}</td>
+        <td class="cell">{{#if customer}}{{customer.name}}{{else}}<span class="text-gray-400">Walk-in</span>{{/if}}</td>
+        <td class="cell text-right">{{itemCount}}</td>
+        <td class="cell">{{#each paymentMethods}}{{paymentMethod this}}{{#unless @last}}, {{/unless}}{{/each}}</td>
+        <td class="cell text-right font-medium">{{currency totals.total}}</td>
+        <td class="cell">{{badge status}}</td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+</div>
+{{> components/pagination pagination=pagination}}
+{{else}}
+{{> components/empty-state icon="receipt" title="No sales found" hint="Try a wider date range or clear the filters."}}
+{{/if}}
+
+<style type="text/tailwindcss">
+  @layer components {
+    .cell { @apply px-3 py-2; }
+    .field { @apply mt-1 w-full rounded border border-gray-300 bg-white p-2 text-sm; }
+  }
+</style>

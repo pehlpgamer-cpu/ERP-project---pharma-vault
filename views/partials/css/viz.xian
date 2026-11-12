@@ -1,0 +1,15 @@
+{{!-- css/viz: chart tokens and shared chart text styles (light mode only: the app has no dark theme). Included once, inside a <style type="text/tailwindcss"> block, by a page that draws charts. --}}
+.viz-root {
+    --surface-1: #fcfcfb;
+    --text-primary: #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted: #898781;
+    --grid: #e1e0d9;
+    --baseline: #c3c2b7;
+    --series-1: #2a78d6;
+    --series-1-hover: #3987e5;
+    background: var(--surface-1);
+    color: var(--text-primary);
+}
+.viz-secondary { color: var(--text-secondary); }
+.viz-muted { color: var(--text-muted); }

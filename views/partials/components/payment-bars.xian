@@ -1,0 +1,31 @@
+{{!--
+  components/payment-bars: ranked horizontal bars, one per payment method, one hue (the names label the bars).
+  Required: paymentMix = [{ label, amount, pct, barPct }] sorted largest first. Needs the chart tokens from css/viz.
+--}}
+<section class="viz-root border border-gray-200 p-4" aria-labelledby="payment-chart-title">
+  <h2 id="payment-chart-title" class="text-base font-semibold">Payment methods</h2>
+  <p class="text-sm viz-secondary">Share of the amount collected in the last 14 days (cash is net of change).</p>
+  {{#if paymentMix.length}}
+  <ul class="mt-3 space-y-3">
+    {{#each paymentMix}}
+    <li>
+      <div class="flex items-baseline justify-between gap-2 text-sm">
+        <span>{{label}}</span>
+        <span class="font-medium">{{currency amount}} <span class="viz-muted font-normal">&middot; {{pct}}%</span></span>
+      </div>
+      <div class="viz-hbar-slot"><div class="viz-hbar" style="width: {{barPct}}%"></div></div>
+    </li>
+    {{/each}}
+  </ul>
+  {{else}}
+  <div class="mt-3">
+    {{> components/empty-state icon="credit-card" title="No payments yet" hint="Payments appear here once sales are completed."}}
+  </div>
+  {{/if}}
+</section>
+<style type="text/tailwindcss">
+  @layer components {
+    .viz-hbar-slot { margin-top: 0.25rem; border-left: 1px solid var(--baseline); }
+    .viz-hbar { height: 0.625rem; background: var(--series-1); border-radius: 0 4px 4px 0; min-width: 2px; }
+  }
+</style>

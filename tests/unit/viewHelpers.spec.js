@@ -2,6 +2,7 @@ import { test } from "@japa/runner";
 import and from "../../views/helpers/and.js";
 import badge from "../../views/helpers/badge.js";
 import can from "../../views/helpers/can.js";
+import concat from "../../views/helpers/concat.js";
 import eq from "../../views/helpers/eq.js";
 import formatDate from "../../views/helpers/formatDate.js";
 import formatDateTime from "../../views/helpers/formatDateTime.js";
@@ -10,6 +11,7 @@ import gt from "../../views/helpers/gt.js";
 import isActive from "../../views/helpers/isActive.js";
 import not from "../../views/helpers/not.js";
 import or from "../../views/helpers/or.js";
+import paymentMethod from "../../views/helpers/paymentMethod.js";
 
 // Handlebars always passes its options object as the last argument.
 const options = (permissions) => {
@@ -76,6 +78,29 @@ test.group("format helpers", () => {
     expect(formatNumber(0)).toBe("0");
     expect(formatNumber(null)).toBe("");
     expect(formatNumber("")).toBe("");
+  });
+});
+
+test.group("text helpers", () => {
+  test("concat joins its arguments and drops the trailing options argument", ({ expect }) => {
+    expect(concat("Yesterday ", "₱10.00", {})).toBe("Yesterday ₱10.00");
+    expect(concat(14, " in the last 14 days", {})).toBe("14 in the last 14 days");
+    expect(concat({})).toBe("");
+  });
+
+  test("paymentMethod gives each method its customer-facing label", ({ expect }) => {
+    expect(paymentMethod("CASH")).toBe("Cash");
+    expect(paymentMethod("GCASH")).toBe("GCash");
+    expect(paymentMethod("BANK_TRANSFER")).toBe("Bank transfer");
+  });
+
+  test("paymentMethod reads an unknown method as words and prints nothing for no method", ({
+    expect,
+  }) => {
+    expect(paymentMethod("STORE_CREDIT")).toBe("Store credit");
+    expect(paymentMethod(null)).toBe("");
+    expect(paymentMethod(undefined)).toBe("");
+    expect(paymentMethod("")).toBe("");
   });
 });
 

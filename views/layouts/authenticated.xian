@@ -11,7 +11,7 @@
       {{>sideNavBar}}
     </aside>
     <div class="flex min-w-0 flex-1 flex-col">
-      <header class="flex items-center gap-3 border-b border-gray-200 bg-white px-4 py-2">
+      <header id="app-header" class="flex items-center gap-3 border-b border-gray-200 bg-white px-4 py-2">
         <button type="button" id="nav-toggle" class="btn md:hidden" aria-label="Toggle navigation" aria-controls="app-sidebar">
           <i class="bi bi-list" aria-hidden="true"></i>
         </button>
@@ -27,7 +27,9 @@
       <main class="flex-1 p-4">
         {{{body}}}
       </main>
-      {{>footer}}
+      <div id="app-footer">
+        {{>footer}}
+      </div>
     </div>
   </div>
 
@@ -47,6 +49,11 @@
   @layer components {
     .nav-link { @apply flex items-center gap-2 rounded px-3 py-2 text-sm text-gray-700 hover:bg-red-50 hover:text-red-700; }
     .nav-link-active { @apply bg-red-100 font-semibold text-red-800; }
+  }
+  /* A printed receipt is the receipt only: no navigation, header or footer around it. */
+  @media print {
+    #app-sidebar, #app-header, #app-footer, .no-print { display: none !important; }
+    main { padding: 0 !important; }
   }
   </style>
 </body>

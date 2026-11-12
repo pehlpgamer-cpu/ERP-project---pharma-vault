@@ -1,0 +1,68 @@
+{{!--
+  components/daily-chart: column chart of daily gross sales, one series in one hue.
+  Required: daily = [{ date, label, day, salesCount, grossSales, heightPct, isToday }],
+            yTicks = [{ label, pct, isBase }], peak = { label, grossSales } or null.
+  Needs the chart tokens from css/viz on the page. Values are reachable without hover: every column is
+  focusable with the same tooltip, and the table view below lists every day.
+--}}
+<section class="viz-root border border-gray-200 p-4" aria-labelledby="daily-chart-title">
+  <h2 id="daily-chart-title" class="text-base font-semibold">Daily gross sales</h2>
+  <p class="text-sm viz-secondary">
+    Last {{daily.length}} days, today on the right.
+    {{#if peak}}Highest day: {{currency peak.grossSales}} on {{peak.label}}.{{/if}}
+  </p>
+
+  <div class="viz-plot">
+    <div class="viz-grid" aria-hidden="true">
+      {{#each yTicks}}
+      <div class="viz-gridline {{#if isBase}}viz-baseline{{/if}}" style="bottom: {{pct}}%"><span class="viz-tick">{{label}}</span></div>
+      {{/each}}
+    </div>
+    <ol class="viz-columns">
+      {{#each daily}}
+      <li class="viz-slot" tabindex="0" data-tip="{{label}}: {{currency grossSales}}, {{salesCount}} sales" aria-label="{{label}}: {{currency grossSales}}, {{salesCount}} sales">
+        <span class="viz-bar" style="height: {{heightPct}}%"></span>
+        <span class="viz-x {{#if isToday}}viz-x-today{{/if}}">{{day}}</span>
+      </li>
+      {{/each}}
+    </ol>
+  </div>
+
+  <details class="mt-3 text-sm">
+    <summary class="cursor-pointer viz-secondary">View as table</summary>
+    <table class="mt-2 w-full text-left">
+      <thead class="viz-secondary">
+        <tr><th class="py-1 pr-3 font-medium">Day</th><th class="py-1 pr-3 text-right font-medium">Sales</th><th class="py-1 text-right font-medium">Gross sales</th></tr>
+      </thead>
+      <tbody>
+        {{#each daily}}
+        <tr data-day-row class="border-t border-gray-200">
+          <td class="py-1 pr-3">{{label}}</td>
+          <td class="py-1 pr-3 text-right">{{salesCount}}</td>
+          <td class="py-1 text-right">{{currency grossSales}}</td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </details>
+</section>
+<style type="text/tailwindcss">
+  @layer components {
+    /* plot area: 12rem of bars, a 1.5rem band for the day labels, 2rem above for the tooltip */
+    .viz-plot { position: relative; height: 13.5rem; margin: 2rem 0 0 3.25rem; }
+    .viz-grid { position: absolute; inset: 0 0 1.5rem 0; }
+    .viz-gridline { position: absolute; left: 0; right: 0; border-top: 1px solid var(--grid); }
+    .viz-baseline { border-top-color: var(--baseline); }
+    .viz-tick { position: absolute; right: 100%; padding-right: 0.5rem; transform: translateY(-50%); font-size: 0.75rem; line-height: 1; color: var(--text-muted); white-space: nowrap; }
+    .viz-columns { position: absolute; inset: 0; display: flex; margin: 0; padding: 0; list-style: none; }
+    .viz-slot { position: relative; flex: 1; display: grid; grid-template-rows: 1fr 1.5rem; justify-items: center; align-items: end; outline-offset: -2px; }
+    .viz-bar { width: min(1.5rem, 62%); background: var(--series-1); border-radius: 4px 4px 0 0; transition: background-color 120ms; }
+    .viz-slot:hover .viz-bar, .viz-slot:focus-visible .viz-bar { background: var(--series-1-hover); }
+    .viz-x { align-self: center; font-size: 0.75rem; color: var(--text-muted); }
+    .viz-x-today { color: var(--text-primary); font-weight: 600; }
+    .viz-slot::after { content: attr(data-tip); position: absolute; top: -2rem; left: 50%; transform: translateX(-50%); white-space: nowrap; padding: 0.25rem 0.5rem; border-radius: 4px; background: var(--text-primary); color: var(--surface-1); font-size: 0.75rem; opacity: 0; pointer-events: none; z-index: 10; }
+    .viz-slot:first-child::after { left: 0; transform: none; }
+    .viz-slot:last-child::after { left: auto; right: 0; transform: none; }
+    .viz-slot:hover::after, .viz-slot:focus-visible::after { opacity: 1; }
+  }
+</style>
