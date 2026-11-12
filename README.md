@@ -14,6 +14,7 @@ the day. Managers and accountants read the sales on a dashboard, in a list and t
 | `/sales`, `/sales/:id` | any `sales.view.*` | Filterable sales list and a printable receipt with the batches each line came from |
 | `/pos-page` | `sales.create` | Product search or barcode scan, cart, split payments with live change |
 | `/cash-register-page` | `register.manage` | Open a register with a counted float; close it against a counted drawer |
+| `/products` | `products.manage` | Product list, create and edit with units, conversion factors, barcodes and selling prices; activate or deactivate. A product with stock or sales keeps its existing units, factors and base unit. |
 | `/users` | `users.manage` | List of accounts |
 
 Products, purchasing, prescriptions, returns and stock transfers have tables in the database but no
@@ -98,6 +99,17 @@ npm run views:check     # every page, layout, partial and helper resolves; rende
 | `sales.create` | yes | yes | yes | |
 | `register.manage` | yes | yes | yes | |
 | `users.manage` | yes | | | |
+| `products.manage` | yes | yes | | |
+
+A database seeded before `products.manage` existed needs a re-seed, or this one grant (admin and pharmacist):
+
+```sql
+INSERT INTO permissions (id, name, description)
+VALUES (UUID(), 'products.manage', 'Create and edit products');
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r JOIN permissions p ON p.name = 'products.manage'
+WHERE r.name IN ('admin', 'pharmacist');
+```
 
 A sales scope of `all` beats `branch`, which beats `own`. A sale outside the caller's scope answers
 404, as if it did not exist.
