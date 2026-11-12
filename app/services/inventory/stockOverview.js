@@ -6,6 +6,7 @@ import { and, asc, count, eq, gt, inArray, like, or, sql } from "drizzle-orm";
 import { db } from "../../../database/client.js";
 import { HttpError } from "../../http/errors.js";
 import { inventories } from "../../models/inventories.js";
+import { branches } from "../../models/branches.js";
 import { inventoryBatches } from "../../models/inventory-batches.js";
 import { productUnits } from "../../models/product-units.js";
 import { products } from "../../models/products.js";
@@ -249,4 +250,12 @@ export async function listBatches({
       return { ...row, expirationDate: toDateString(row.expirationDate) };
     }),
   };
+}
+
+/** Branches a user with the all-branch scope can choose from: id, code and name. */
+export async function listBranches() {
+  return await db
+    .select({ id: branches.id, code: branches.code, name: branches.name })
+    .from(branches)
+    .orderBy(asc(branches.name));
 }

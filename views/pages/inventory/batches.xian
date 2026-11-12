@@ -1,0 +1,128 @@
+{{!-- inventory/batches: stock batches with status actions. Required: batches, total, filters, filterErrors, canManage, branchId, branchOptions, statusOptions, expiryOptions, back, pagination. --}}
+<div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+  {{> components/page-header title="Stock batches" icon="list-ul"}}
+  <a href="/inventory{{#if branchId}}?branchId={{branchId}}{{/if}}" class="btn"><i class="bi bi-boxes" aria-hidden="true"></i> Stock overview</a>
+</div>
+
+{{#if filterErrors.length}}
+<div class="mb-4 border border-red-300 bg-red-50 p-3 text-sm text-red-800" role="alert">
+  <p class="font-medium">Some filters were not applied</p>
+  <ul class="list-inside list-disc">
+    {{#each filterErrors}}
+    <li>{{this}}</li>
+    {{/each}}
+  </ul>
+</div>
+{{/if}}
+
+<form method="GET" action="/inventory/batches" class="mb-4 grid gap-3 border border-gray-200 bg-white p-3 sm:grid-cols-2 lg:grid-cols-4">
+  <label class="text-sm text-gray-700 lg:col-span-2">Search
+    <input type="search" name="q" value="{{filters.q}}" maxlength="100" placeholder="SKU, name, generic or batch number" class="field">
+  </label>
+  <label class="text-sm text-gray-700">Status
+    <select name="status" class="field">
+      {{#each statusOptions}}
+      <option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+      {{/each}}
+    </select>
+  </label>
+  <label class="text-sm text-gray-700">Expiry
+    <select name="expiry" class="field">
+      {{#each expiryOptions}}
+      <option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+      {{/each}}
+    </select>
+  </label>
+  {{#if branchOptions.length}}
+  <label class="text-sm text-gray-700">Branch
+    <select name="branchId" class="field">
+      {{#each branchOptions}}
+      <option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+      {{/each}}
+    </select>
+  </label>
+  {{/if}}
+  <div class="flex items-end gap-2">
+    <button type="submit" class="btn"><i class="bi bi-funnel" aria-hidden="true"></i> Filter</button>
+    <a href="/inventory/batches" class="btn bg-gray-200">Reset</a>
+  </div>
+</form>
+
+{{#if batches.length}}
+<div class="overflow-x-auto border border-gray-200 bg-white">
+  <table class="w-full text-left text-sm">
+    <thead class="bg-gray-50 text-gray-600">
+      <tr>
+        <th class="cell">Batch</th>
+        <th class="cell">Product</th>
+        <th class="cell">Expires</th>
+        <th class="cell text-right">Quantity</th>
+        <th class="cell">Status</th>
+        {{#if canManage}}<th class="cell">Actions</th>{{/if}}
+      </tr>
+    </thead>
+    <tbody>
+      {{#each batches}}
+      <tr class="border-t border-gray-200 align-top">
+        <td class="cell whitespace-nowrap font-medium">{{batchNumber}}</td>
+        <td class="cell">{{productName}} <span class="text-gray-500">{{sku}}</span></td>
+        <td class="cell whitespace-nowrap">{{#if expirationDate}}{{expirationDate}}{{else}}<span class="text-gray-400">No date</span>{{/if}}</td>
+        <td class="cell text-right">{{formatNumber quantityAvailable}}</td>
+        <td class="cell">{{badge status}}</td>
+        {{#if @root.canManage}}
+        <td class="cell">
+          {{#if canQuarantine}}
+          <details class="mb-1">
+            <summary class="cursor-pointer text-red-700 underline">Quarantine</summary>
+            <form method="POST" action="/inventory/batches/{{id}}/quarantine" class="mt-1 flex flex-col gap-1">
+              <input type="hidden" name="back" value="{{@root.back}}">
+              <input type="text" name="reason" required maxlength="500" placeholder="Reason" aria-label="Reason" class="field">
+              <button type="submit" class="btn">Quarantine batch</button>
+            </form>
+          </details>
+          {{/if}}
+          {{#if canRelease}}
+          <details class="mb-1">
+            <summary class="cursor-pointer text-red-700 underline">Release</summary>
+            <form method="POST" action="/inventory/batches/{{id}}/release" class="mt-1 flex flex-col gap-1">
+              <input type="hidden" name="back" value="{{@root.back}}">
+              <input type="text" name="reason" required maxlength="500" placeholder="Reason" aria-label="Reason" class="field">
+              <button type="submit" class="btn">Release batch</button>
+            </form>
+          </details>
+          {{/if}}
+          {{#if canRecall}}
+          <details class="mb-1">
+            <summary class="cursor-pointer text-red-700 underline">Recall</summary>
+            <form method="POST" action="/inventory/batches/{{id}}/recall" class="mt-1 flex flex-col gap-1" data-confirm="Recall this batch? A recalled batch can never be sold again.">
+              <input type="hidden" name="back" value="{{@root.back}}">
+              <input type="text" name="reason" required maxlength="500" placeholder="Reason" aria-label="Reason" class="field">
+              <button type="submit" class="btn">Recall batch</button>
+            </form>
+          </details>
+          {{/if}}
+          {{#if canWriteOff}}
+          <details class="mb-1">
+            <summary class="cursor-pointer text-red-700 underline">Write off</summary>
+            <form method="POST" action="/inventory/batches/{{id}}/write-off" class="mt-1 flex flex-col gap-1" data-confirm="Write off the remaining stock of this batch? This cannot be undone.">
+              <input type="hidden" name="back" value="{{@root.back}}">
+              <select name="kind" aria-label="Write-off kind" class="field">
+                <option value="expired">Expired</option>
+                <option value="damaged">Damaged</option>
+              </select>
+              <input type="text" name="reason" required maxlength="500" placeholder="Reason" aria-label="Reason" class="field">
+              <button type="submit" class="btn">Write off stock</button>
+            </form>
+          </details>
+          {{/if}}
+        </td>
+        {{/if}}
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+</div>
+{{> components/pagination pagination=pagination}}
+{{else}}
+{{> components/empty-state icon="list-ul" title="No batches found" hint="Try other filters."}}
+{{/if}}

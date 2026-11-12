@@ -8,6 +8,7 @@ import userController from "../app/http/controllers/userController.js";
 import authController from "../app/http/controllers/authController.js";
 import cashRegisterController from "../app/http/controllers/cashRegisterController.js";
 import dashboardController from "../app/http/controllers/dashboardController.js";
+import inventoryController from "../app/http/controllers/inventoryController.js";
 import posController from "../app/http/controllers/posController.js";
 import productController from "../app/http/controllers/productController.js";
 import salesController from "../app/http/controllers/salesController.js";
@@ -59,6 +60,31 @@ router.post(
   canManageProducts,
   asyncHandler(productController.update),
 );
+
+const canViewInventory = requirePermission(PERMISSIONS.INVENTORY_VIEW);
+const canManageInventory = requirePermission(PERMISSIONS.INVENTORY_MANAGE);
+
+router.get("/inventory", requireAuth, canViewInventory, asyncHandler(inventoryController.index));
+router.get(
+  "/inventory/batches",
+  requireAuth,
+  canViewInventory,
+  asyncHandler(inventoryController.batches),
+);
+
+for (const [path, handler] of [
+  ["quarantine", inventoryController.quarantine],
+  ["release", inventoryController.release],
+  ["recall", inventoryController.recall],
+  ["write-off", inventoryController.writeOff],
+]) {
+  router.post(
+    `/inventory/batches/:id/${path}`,
+    requireAuth,
+    canManageInventory,
+    asyncHandler(handler),
+  );
+}
 
 const canManageRegister = requirePermission(PERMISSIONS.REGISTER_MANAGE);
 

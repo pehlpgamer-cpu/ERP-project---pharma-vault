@@ -1,0 +1,79 @@
+{{!-- inventory/index: stock overview per product. Required: rows, filters, filterErrors, flagOptions, branchId, branchOptions. --}}
+<div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+  {{> components/page-header title="Inventory" icon="boxes"}}
+  <a href="/inventory/batches{{#if branchId}}?branchId={{branchId}}{{/if}}" class="btn"><i class="bi bi-list-ul" aria-hidden="true"></i> Stock batches</a>
+</div>
+
+{{#if filterErrors.length}}
+<div class="mb-4 border border-red-300 bg-red-50 p-3 text-sm text-red-800" role="alert">
+  <p class="font-medium">Some filters were not applied</p>
+  <ul class="list-inside list-disc">
+    {{#each filterErrors}}
+    <li>{{this}}</li>
+    {{/each}}
+  </ul>
+</div>
+{{/if}}
+
+<form method="GET" action="/inventory" class="mb-4 grid gap-3 border border-gray-200 bg-white p-3 sm:grid-cols-2 lg:grid-cols-4">
+  <label class="text-sm text-gray-700 lg:col-span-2">Search
+    <input type="search" name="q" value="{{filters.q}}" maxlength="100" placeholder="SKU, name, generic or brand" class="field">
+  </label>
+  <label class="text-sm text-gray-700">Show
+    <select name="flag" class="field">
+      {{#each flagOptions}}
+      <option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+      {{/each}}
+    </select>
+  </label>
+  {{#if branchOptions.length}}
+  <label class="text-sm text-gray-700">Branch
+    <select name="branchId" class="field">
+      {{#each branchOptions}}
+      <option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+      {{/each}}
+    </select>
+  </label>
+  {{/if}}
+  <div class="flex items-end gap-2">
+    <button type="submit" class="btn"><i class="bi bi-funnel" aria-hidden="true"></i> Filter</button>
+    <a href="/inventory" class="btn bg-gray-200">Reset</a>
+  </div>
+</form>
+
+{{#if rows.length}}
+<div class="overflow-x-auto border border-gray-200 bg-white">
+  <table class="w-full text-left text-sm">
+    <thead class="bg-gray-50 text-gray-600">
+      <tr>
+        <th class="cell">SKU</th>
+        <th class="cell">Product</th>
+        <th class="cell">Unit</th>
+        <th class="cell text-right">On hand</th>
+        <th class="cell text-right">Sellable</th>
+        <th class="cell text-right">Reorder level</th>
+        <th class="cell">Alerts</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each rows}}
+      <tr class="border-t border-gray-200">
+        <td class="cell whitespace-nowrap"><a href="/inventory/batches?q={{sku}}{{#if ../branchId}}&amp;branchId={{../branchId}}{{/if}}" class="font-medium text-red-700 underline">{{sku}}</a></td>
+        <td class="cell">{{productName}}</td>
+        <td class="cell">{{#if baseUnitName}}{{baseUnitName}}{{else}}<span class="text-gray-400">None</span>{{/if}}</td>
+        <td class="cell text-right">{{formatNumber onHand}}</td>
+        <td class="cell text-right">{{formatNumber sellable}}</td>
+        <td class="cell text-right">{{formatNumber reorderLevel}}</td>
+        <td class="cell">
+          {{#if low}}<span class="mr-1 rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">Low stock</span>{{/if}}
+          {{#if expiringSoon}}<span class="mr-1 rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">Expiring soon</span>{{/if}}
+          {{#if expiredStock}}<span class="mr-1 rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">Expired stock</span>{{/if}}
+        </td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+</div>
+{{else}}
+{{> components/empty-state icon="boxes" title="No stock found" hint="Try other filters, or receive stock first."}}
+{{/if}}

@@ -18,6 +18,8 @@ const STATUS_COLORS = {
   REFUNDED: "blue",
   PARTIALLY_REFUNDED: "blue",
   VOIDED: "gray",
+  QUARANTINED: "amber",
+  RECALLED: "red",
   FAILED: "red",
 };
 
