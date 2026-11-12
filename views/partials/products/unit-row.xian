@@ -1,0 +1,45 @@
+{{!--
+  products/unit-row: one unit of the product form. Params: row (a unit with errors), idx (its index, or the text
+  __INDEX__ in the template the script clones). A unit that already exists on a product with stock or sales shows
+  its unit, factor and base flag read-only (the values are still posted).
+--}}
+{{#if (and @root.hasHistory row.id)}}
+<div class="grid gap-3 border border-gray-200 p-3 sm:grid-cols-6" data-unit-row>
+  <input type="hidden" name="units[{{idx}}][id]" value="{{row.id}}">
+  <input type="hidden" name="units[{{idx}}][unitId]" value="{{row.unitId}}">
+  {{#if row.isBaseUnit}}<input type="hidden" name="units[{{idx}}][isBaseUnit]" value="on">{{/if}}
+  <label class="text-sm text-gray-700 sm:col-span-2">Unit
+    <select class="field" disabled aria-label="Unit">
+      {{#each @root.unitOptions}}
+      <option value="{{id}}" {{#if (eq id ../row.unitId)}}selected{{/if}}>{{name}}</option>
+      {{/each}}
+    </select>
+  </label>
+  <label class="text-sm text-gray-700">Contains (base units)
+    <input type="text" name="units[{{idx}}][conversionFactor]" value="{{row.conversionFactor}}" readonly class="field bg-gray-100">
+    {{#if row.errors.conversionFactor}}<span class="mt-1 block text-xs text-red-700">{{row.errors.conversionFactor}}</span>{{/if}}
+  </label>
+  <label class="flex items-end gap-2 pb-2 text-sm text-gray-700"><input type="checkbox" disabled {{#if row.isBaseUnit}}checked{{/if}}> Base unit</label>
+  {{> products/unit-flags row=row idx=idx}}
+  {{> products/unit-extras row=row idx=idx}}
+</div>
+{{else}}
+<div class="grid gap-3 border border-gray-200 p-3 sm:grid-cols-6" data-unit-row>
+  <input type="hidden" name="units[{{idx}}][id]" value="{{row.id}}">
+  <label class="text-sm text-gray-700 sm:col-span-2">Unit
+    <select name="units[{{idx}}][unitId]" class="field">
+      {{#each @root.unitOptions}}
+      <option value="{{id}}" {{#if (eq id ../row.unitId)}}selected{{/if}}>{{name}}</option>
+      {{/each}}
+    </select>
+    {{#if row.errors.unitId}}<span class="mt-1 block text-xs text-red-700">{{row.errors.unitId}}</span>{{/if}}
+  </label>
+  <label class="text-sm text-gray-700">Contains (base units)
+    <input type="text" name="units[{{idx}}][conversionFactor]" value="{{row.conversionFactor}}" inputmode="decimal" class="field">
+    {{#if row.errors.conversionFactor}}<span class="mt-1 block text-xs text-red-700">{{row.errors.conversionFactor}}</span>{{/if}}
+  </label>
+  <label class="flex items-end gap-2 pb-2 text-sm text-gray-700"><input type="checkbox" name="units[{{idx}}][isBaseUnit]" {{#if row.isBaseUnit}}checked{{/if}}> Base unit</label>
+  {{> products/unit-flags row=row idx=idx}}
+  {{> products/unit-extras row=row idx=idx}}
+</div>
+{{/if}}

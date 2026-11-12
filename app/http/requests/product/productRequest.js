@@ -247,6 +247,14 @@ const Product = z
   });
 
 /**
+ * The form's values as typed, read the same way but not validated: what to show again when the
+ * form is refused. Returns null when the body is not an object.
+ */
+export function echoProductForm(body) {
+  return body === null || typeof body !== "object" || Array.isArray(body) ? null : normalize(body);
+}
+
+/**
  * Validates the product form and normalizes it for the product service: decimal strings with fixed
  * places, booleans for checkboxes, null for empty optional fields, barcodes as lists. Throws
  * ValidationError with paths such as `sku` and `units.1.conversionFactor`.

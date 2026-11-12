@@ -1,0 +1,114 @@
+{{!--
+  products/form: create or edit a product. Required: values (the product, units with errors), errors (by field),
+  hasHistory, isNew, action, categories, manufacturers, unitOptions, classifications, blankRow.
+--}}
+{{#if isNew}}
+{{> components/page-header title="New product" icon="capsule"}}
+{{else}}
+{{> components/page-header title="Edit product" icon="capsule"}}
+{{/if}}
+
+{{#if hasHistory}}
+<div class="mb-4 border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900" role="note">
+  <i class="bi bi-lock" aria-hidden="true"></i>
+  This product has stock or sales. Its existing units, conversion factors and base unit can no longer be changed.
+  You can still rename it, change prices, barcodes and flags, and add units.
+</div>
+{{/if}}
+
+<form method="POST" action="{{action}}" class="grid gap-4" novalidate>
+  <section class="grid gap-3 border border-gray-200 bg-white p-4 sm:grid-cols-2 lg:grid-cols-3" aria-labelledby="details-title">
+    <h2 id="details-title" class="text-base font-semibold sm:col-span-2 lg:col-span-3">Product</h2>
+
+    <label class="text-sm text-gray-700">SKU
+      <input type="text" name="sku" value="{{values.sku}}" maxlength="100" required class="field">
+      {{#if errors.sku}}<span class="mt-1 block text-xs text-red-700">{{errors.sku}}</span>{{/if}}
+    </label>
+    <label class="text-sm text-gray-700">Product name
+      <input type="text" name="productName" value="{{values.productName}}" maxlength="255" required class="field">
+      {{#if errors.productName}}<span class="mt-1 block text-xs text-red-700">{{errors.productName}}</span>{{/if}}
+    </label>
+    <label class="text-sm text-gray-700">Generic name
+      <input type="text" name="genericName" value="{{values.genericName}}" maxlength="255" required class="field">
+      {{#if errors.genericName}}<span class="mt-1 block text-xs text-red-700">{{errors.genericName}}</span>{{/if}}
+    </label>
+    <label class="text-sm text-gray-700">Brand name
+      <input type="text" name="brandName" value="{{values.brandName}}" maxlength="255" class="field">
+      {{#if errors.brandName}}<span class="mt-1 block text-xs text-red-700">{{errors.brandName}}</span>{{/if}}
+    </label>
+    <label class="text-sm text-gray-700">Strength
+      <input type="text" name="strength" value="{{values.strength}}" maxlength="100" class="field">
+      {{#if errors.strength}}<span class="mt-1 block text-xs text-red-700">{{errors.strength}}</span>{{/if}}
+    </label>
+    <label class="text-sm text-gray-700">Dosage form
+      <input type="text" name="dosageForm" value="{{values.dosageForm}}" maxlength="100" class="field">
+      {{#if errors.dosageForm}}<span class="mt-1 block text-xs text-red-700">{{errors.dosageForm}}</span>{{/if}}
+    </label>
+    <label class="text-sm text-gray-700">Category
+      <select name="categoryId" class="field">
+        <option value="">None</option>
+        {{#each categories}}
+        <option value="{{id}}" {{#if (eq id ../values.categoryId)}}selected{{/if}}>{{name}}</option>
+        {{/each}}
+      </select>
+      {{#if errors.categoryId}}<span class="mt-1 block text-xs text-red-700">{{errors.categoryId}}</span>{{/if}}
+    </label>
+    <label class="text-sm text-gray-700">Manufacturer
+      <select name="manufacturerId" class="field">
+        <option value="">None</option>
+        {{#each manufacturers}}
+        <option value="{{id}}" {{#if (eq id ../values.manufacturerId)}}selected{{/if}}>{{name}}</option>
+        {{/each}}
+      </select>
+      {{#if errors.manufacturerId}}<span class="mt-1 block text-xs text-red-700">{{errors.manufacturerId}}</span>{{/if}}
+    </label>
+    <label class="text-sm text-gray-700">Prescription class
+      <select name="prescriptionClassification" class="field">
+        {{#each classifications}}
+        <option value="{{value}}" {{#if (eq value ../values.prescriptionClassification)}}selected{{/if}}>{{label}}</option>
+        {{/each}}
+      </select>
+      {{#if errors.prescriptionClassification}}<span class="mt-1 block text-xs text-red-700">{{errors.prescriptionClassification}}</span>{{/if}}
+    </label>
+    <label class="flex items-end gap-2 pb-2 text-sm text-gray-700">
+      <input type="checkbox" name="requiresPrescription" {{#if values.requiresPrescription}}checked{{/if}}> Requires a prescription
+    </label>
+    <label class="text-sm text-gray-700">Reorder level (base units)
+      <input type="text" name="reorderLevel" value="{{values.reorderLevel}}" inputmode="decimal" class="field">
+      {{#if errors.reorderLevel}}<span class="mt-1 block text-xs text-red-700">{{errors.reorderLevel}}</span>{{/if}}
+    </label>
+    <label class="flex items-end gap-2 pb-2 text-sm text-gray-700">
+      <input type="checkbox" name="isActive" {{#if values.isActive}}checked{{/if}}> Active
+    </label>
+    <label class="text-sm text-gray-700 sm:col-span-2 lg:col-span-3">Description
+      <textarea name="description" rows="2" maxlength="2000" class="field">{{values.description}}</textarea>
+      {{#if errors.description}}<span class="mt-1 block text-xs text-red-700">{{errors.description}}</span>{{/if}}
+    </label>
+  </section>
+
+  <section class="grid gap-3 border border-gray-200 bg-white p-4" aria-labelledby="units-title">
+    <h2 id="units-title" class="text-base font-semibold">Units, barcodes and prices</h2>
+    <p class="text-sm text-gray-600">Pick one base unit (the smallest, containing 1). Larger units say how many base units they hold, for example a strip of 10 tablets.</p>
+    {{#if errors.units}}<p class="text-sm text-red-700" role="alert">{{errors.units}}</p>{{/if}}
+
+    <div id="unit-rows" class="grid gap-3" data-next-index="{{values.units.length}}">
+      {{#each values.units}}
+      {{> products/unit-row row=this idx=@index}}
+      {{/each}}
+    </div>
+    <div>
+      <button type="button" id="add-unit" class="btn bg-gray-200 text-sm"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add unit</button>
+    </div>
+  </section>
+
+  <div class="flex flex-wrap gap-2">
+    <button type="submit" class="btn"><i class="bi bi-check-lg" aria-hidden="true"></i> Save product</button>
+    <a href="/products" class="btn bg-gray-200">Cancel</a>
+  </div>
+</form>
+
+<template id="unit-row-template">
+  {{> products/unit-row row=blankRow idx="__INDEX__"}}
+</template>
+
+<script type="module" src="/js/product-form.js"></script>

@@ -103,6 +103,23 @@ export async function listProducts({
   return { rows, total: Number(total) };
 }
 
+/** The choices a product form offers: every category, manufacturer and unit by name. */
+export async function loadFormOptions() {
+  const [categories, makers, unitRows] = await Promise.all([
+    db
+      .select({ id: productCategories.id, name: productCategories.name })
+      .from(productCategories)
+      .orderBy(asc(productCategories.name)),
+    db
+      .select({ id: manufacturers.id, name: manufacturers.name })
+      .from(manufacturers)
+      .orderBy(asc(manufacturers.name)),
+    db.select({ id: units.id, name: units.name }).from(units).orderBy(asc(units.name)),
+  ]);
+
+  return { categories, manufacturers: makers, units: unitRows };
+}
+
 async function hasHistory(executor, productId) {
   const [batch] = await executor
     .select({ id: inventoryBatches.id })
@@ -322,10 +339,14 @@ async function replaceBarcodes(tx, unitIds, desired) {
 }
 
 // A changed global price closes the open row and opens a new one from `now`; history is never edited.
-async function writePrice(tx, unitRowId, price, now) {
+async function writePrice(tx, unitRowId, price, instant) {
   if (price === null) {
     return;
   }
+
+  // DATETIME columns hold whole seconds and MySQL rounds a fraction up: round down ourselves, so a
+  // price never starts in the future and a new product is sellable the moment it is saved.
+  const now = new Date(Math.floor(instant.getTime() / 1000) * 1000);
 
   const open = await tx
     .select()

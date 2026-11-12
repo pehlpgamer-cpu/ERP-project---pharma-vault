@@ -1,0 +1,3 @@
+{{!-- products/unit-flags: the two checkboxes of a unit row. Params: row, idx. --}}
+<label class="flex items-end gap-2 pb-2 text-sm text-gray-700"><input type="checkbox" name="units[{{idx}}][canBeSold]" {{#if row.canBeSold}}checked{{/if}}> Sold at the counter</label>
+<label class="flex items-end gap-2 pb-2 text-sm text-gray-700"><input type="checkbox" name="units[{{idx}}][isActive]" {{#if row.isActive}}checked{{/if}}> Active</label>
