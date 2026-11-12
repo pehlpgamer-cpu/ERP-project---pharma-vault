@@ -4,8 +4,10 @@ import { RouteBuilder } from "../src/RouteBuilder.js";
 const routeBuilder = new RouteBuilder(router);
 
 import healthController from "../app/http/controllers/api/v1/healthController.js";
+import productsApiController from "../app/http/controllers/api/v1/productsController.js";
 import salesApiController from "../app/http/controllers/api/v1/salesController.js";
 import asyncHandler from "../app/http/middleware/asyncHandler.js";
+import canSell from "../app/http/middleware/canSell.js";
 import canViewSales from "../app/http/middleware/canViewSales.js";
 import requireAuth from "../app/http/middleware/requireAuth.js";
 
@@ -20,6 +22,11 @@ router.get("/sales/summary", canViewSales, asyncHandler(salesApiController.summa
 routeBuilder.apiResource("/sales", salesApiController, {
   include: ["index", "show"],
   middleware: [canViewSales],
+});
+
+routeBuilder.apiResource("/products", productsApiController, {
+  include: ["index"],
+  middleware: [canSell],
 });
 
 export default router;

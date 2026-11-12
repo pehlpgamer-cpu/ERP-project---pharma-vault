@@ -5,9 +5,9 @@ import {
   listOpenableRegisters,
   openSession,
   sessionSummary,
-  varianceThreshold,
 } from "../../services/register/registerSessions.js";
 import { cmp } from "../../services/support/decimal.js";
+import { varianceThreshold } from "../../services/support/settings.js";
 import { HttpError, ValidationError } from "../errors.js";
 import { requestMeta } from "../support/requestMeta.js";
 

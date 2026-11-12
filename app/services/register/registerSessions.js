@@ -14,9 +14,9 @@ import { sales } from "../../models/sales.js";
 import { users } from "../../models/users.js";
 import { recordAudit } from "../audit/auditLog.js";
 import { add, cmp, sub, toScale } from "../support/decimal.js";
+import { varianceThreshold } from "../support/settings.js";
 
 const MONEY_SCALE = 2;
-const DEFAULT_VARIANCE_THRESHOLD = "50.00";
 // Sales that count toward "sales made in this session": money changed hands and was not voided.
 const COUNTED_SALE_STATUSES = ["COMPLETED", "PARTIALLY_REFUNDED", "REFUNDED"];
 
@@ -49,18 +49,6 @@ const isUuid = (value) => {
 const registerUnavailable = () => {
   return new HttpError(409, "register_unavailable", "That register is not available");
 };
-
-/** The most the drawer may be over or short before a close needs a note (REGISTER_VARIANCE_THRESHOLD). */
-export function varianceThreshold() {
-  const configured = (process.env.REGISTER_VARIANCE_THRESHOLD ?? "").trim();
-  const value = configured === "" ? DEFAULT_VARIANCE_THRESHOLD : configured;
-
-  if (!/^\d{1,12}(\.\d{1,2})?$/.test(value)) {
-    throw new Error("REGISTER_VARIANCE_THRESHOLD must be an amount such as 50.00");
-  }
-
-  return toScale(value, MONEY_SCALE);
-}
 
 /** The user's open session with its register, or null. */
 export async function getOpenSession(userId) {

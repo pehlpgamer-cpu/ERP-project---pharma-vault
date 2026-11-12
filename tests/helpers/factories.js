@@ -144,11 +144,77 @@ export async function makeAuthUser(options = {}) {
 }
 
 /**
- * A product with its sale units, prices, barcodes and (when `branchId` is given) stock batches.
- * Each unit: { name, factor = "1", base, price, canBeSold = true, isActive = true, barcodes = [] };
- * a unit with a price gets a global product_prices row effective since 2000.
+ * Stock for a product in one branch: an inventory row and its batches.
  * Each batch: { quantity, expirationDate = "2030-01-31" | null, status = "ACTIVE", receivedAt,
  * unitCost = "1.0000", batchNumber }.
+ */
+export async function makeStock({ productId, branchId, batches: batchSpecs }) {
+  const inventoryId = randomUUID();
+  const batchRows = [];
+
+  await db.insert(inventories).values({
+    id: inventoryId,
+    branchId,
+    productId,
+    quantityOnHand: sum(
+      batchSpecs.map((batch) => {
+        return batch.quantity;
+      }),
+    ),
+  });
+
+  for (const spec of batchSpecs) {
+    const id = randomUUID();
+    const expiry = spec.expirationDate === undefined ? "2030-01-31" : spec.expirationDate;
+    const row = {
+      id,
+      inventoryId,
+      productId,
+      branchId,
+      batchNumber: spec.batchNumber ?? `BATCH-${nextNumber()}`,
+      expirationDate: expiry === null ? null : new Date(`${expiry}T00:00:00Z`),
+      quantityReceived: spec.quantity,
+      quantityAvailable: spec.quantity,
+      unitCost: spec.unitCost ?? "1.0000",
+      receivedAt: spec.receivedAt ?? DEFAULT_TIME,
+      status: spec.status ?? "ACTIVE",
+    };
+
+    await db.insert(inventoryBatches).values(row);
+    batchRows.push({ ...row, expirationDate: expiry });
+  }
+
+  return { inventoryId, batches: batchRows };
+}
+
+/** A price row for a product unit: global when `branchId` is null, effective since 2000 by default. */
+export async function makePrice({
+  productUnitId,
+  branchId = null,
+  unitPrice,
+  effectiveFrom = new Date("2000-01-01T00:00:00Z"),
+  effectiveTo = null,
+  isActive = true,
+}) {
+  const row = {
+    id: randomUUID(),
+    productUnitId,
+    branchId,
+    unitPrice,
+    effectiveFrom,
+    effectiveTo,
+    isActive,
+  };
+
+  await db.insert(productPrices).values(row);
+
+  return row;
+}
+
+/**
+ * A product with its sale units, prices, barcodes and (when `branchId` is given) stock batches.
+ * Each unit: { name, factor = "1", base, price, canBeSold = true, isActive = true, barcodes = [] };
+ * a unit with a price gets a global product_prices row effective since 2000. Batches: see makeStock.
  */
 export async function makeProduct({
   branchId = null,
@@ -156,6 +222,8 @@ export async function makeProduct({
   name,
   genericName = "Generic",
   brandName = null,
+  strength = null,
+  dosageForm = null,
   classification = "OTC",
   requiresPrescription = false,
   isActive = true,
@@ -173,6 +241,8 @@ export async function makeProduct({
     genericName,
     brandName,
     productName,
+    strength,
+    dosageForm,
     prescriptionClassification: classification,
     requiresPrescription,
     isActive,
@@ -209,53 +279,21 @@ export async function makeProduct({
     unitRows.push({ id, name: spec.name, factor, isBase: spec.base ?? false });
   }
 
-  const batchRows = [];
-  let inventoryId = null;
+  let stock = { inventoryId: null, batches: [] };
 
   if (batchSpecs.length > 0) {
     if (branchId === null) {
       throw new Error("makeProduct needs a branchId to create batches");
     }
 
-    inventoryId = randomUUID();
-    await db.insert(inventories).values({
-      id: inventoryId,
-      branchId,
-      productId,
-      quantityOnHand: sum(
-        batchSpecs.map((batch) => {
-          return batch.quantity;
-        }),
-      ),
-    });
-
-    for (const spec of batchSpecs) {
-      const id = randomUUID();
-      const expiry = spec.expirationDate === undefined ? "2030-01-31" : spec.expirationDate;
-      const row = {
-        id,
-        inventoryId,
-        productId,
-        branchId,
-        batchNumber: spec.batchNumber ?? `BATCH-${nextNumber()}`,
-        expirationDate: expiry === null ? null : new Date(`${expiry}T00:00:00Z`),
-        quantityReceived: spec.quantity,
-        quantityAvailable: spec.quantity,
-        unitCost: spec.unitCost ?? "1.0000",
-        receivedAt: spec.receivedAt ?? DEFAULT_TIME,
-        status: spec.status ?? "ACTIVE",
-      };
-
-      await db.insert(inventoryBatches).values(row);
-      batchRows.push({ ...row, expirationDate: expiry });
-    }
+    stock = await makeStock({ productId, branchId, batches: batchSpecs });
   }
 
   return {
     product: { id: productId, sku: productSku, name: productName },
     units: unitRows,
-    batches: batchRows,
-    inventoryId,
+    batches: stock.batches,
+    inventoryId: stock.inventoryId,
   };
 }
 

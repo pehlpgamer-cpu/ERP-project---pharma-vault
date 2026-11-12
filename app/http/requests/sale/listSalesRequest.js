@@ -1,4 +1,5 @@
 import * as z from "zod";
+import { wholeNumber, withoutEmptyValues } from "../fields.js";
 import { parse } from "../validate.js";
 
 const STATUSES = ["PENDING", "COMPLETED", "PARTIALLY_REFUNDED", "REFUNDED", "VOIDED"];
@@ -11,12 +12,6 @@ const SORTS = [
   "invoiceNumber",
   "-invoiceNumber",
 ];
-
-const wholeNumber = z
-  .string()
-  .regex(/^\d+$/, "Must be a whole number")
-  .transform(Number)
-  .pipe(z.number().int().min(1));
 
 const calendarDate = z
   .string()
@@ -63,15 +58,6 @@ const ListQuery = Scope.extend({
 }).superRefine(checkRange);
 
 const SummaryQuery = Scope.superRefine(checkRange);
-
-// `?q=&status=` means "not given", exactly like leaving the parameter out.
-function withoutEmptyValues(query) {
-  return Object.fromEntries(
-    Object.entries(query ?? {}).filter(([, value]) => {
-      return value !== "";
-    }),
-  );
-}
 
 /**
  * Validates GET /sales query parameters and applies the defaults (page 1, 20 per page, newest
