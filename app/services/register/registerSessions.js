@@ -14,6 +14,7 @@ import { sales } from "../../models/sales.js";
 import { users } from "../../models/users.js";
 import { recordAudit } from "../audit/auditLog.js";
 import { add, cmp, sub, toScale } from "../support/decimal.js";
+import { isUuid } from "../support/ids.js";
 import { varianceThreshold } from "../support/settings.js";
 
 const MONEY_SCALE = 2;
@@ -41,10 +42,6 @@ const CloseInput = z.object({
     .max(500, "The note must be 500 characters or fewer")
     .default(""),
 });
-
-const isUuid = (value) => {
-  return z.uuid().safeParse(value).success;
-};
 
 const registerUnavailable = () => {
   return new HttpError(409, "register_unavailable", "That register is not available");
