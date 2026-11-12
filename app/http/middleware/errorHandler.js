@@ -53,7 +53,7 @@ export function errorHandler(error, req, res, next) {
   const inProduction = process.env.NODE_ENV === "production";
   const data = {
     pageTitle: heading,
-    layout: "main",
+    layout: res.locals?.currentUser ? "authenticated" : "main",
     status,
     heading,
     message: status === 404 ? "The page you asked for does not exist." : message,

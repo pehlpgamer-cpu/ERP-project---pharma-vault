@@ -1,9 +1,11 @@
-
+{{!-- css/base: styles shared by every layout. Included inside a <style type="text/tailwindcss"> block. --}}
 .bg-default {
     background: linear-gradient(90deg, #f7a2a2 0%, #fcbe96 50%, #fee9af 100%);
 }
 
-.btn-default
-{
-    
+/* Inside the components layer so utilities can still override it (class="btn bg-gray-200"). */
+@layer components {
+    .btn {
+        @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded bg-red-300 p-2 duration-150 hover:scale-105 hover:bg-black hover:text-white;
+    }
 }

@@ -1,0 +1,32 @@
+{{!-- sideNavBar: main navigation, filtered by the signed-in user's permissions. Needs currentUser and currentPath. --}}
+<nav class="flex flex-1 flex-col gap-1 p-3" aria-label="Main">
+  <a href="/dashboard-page" class="nav-link {{#if (isActive currentPath "/dashboard-page")}}nav-link-active{{/if}}">
+    <i class="bi bi-speedometer2" aria-hidden="true"></i> Dashboard
+  </a>
+  {{#if (can "sales.view.own" "sales.view.branch" "sales.view.all")}}
+  <a href="/sales" class="nav-link {{#if (isActive currentPath "/sales")}}nav-link-active{{/if}}">
+    <i class="bi bi-receipt" aria-hidden="true"></i> Sales
+  </a>
+  {{/if}}
+  {{#if (can "sales.create")}}
+  <a href="/pos-page" class="nav-link {{#if (isActive currentPath "/pos-page")}}nav-link-active{{/if}}">
+    <i class="bi bi-cart-check" aria-hidden="true"></i> New sale
+  </a>
+  {{/if}}
+  {{#if (can "register.manage")}}
+  <a href="/cash-register-page" class="nav-link {{#if (isActive currentPath "/cash-register-page")}}nav-link-active{{/if}}">
+    <i class="bi bi-cash-stack" aria-hidden="true"></i> Cash register
+  </a>
+  {{/if}}
+  {{#if (can "users.manage")}}
+  <a href="/users" class="nav-link {{#if (isActive currentPath "/users")}}nav-link-active{{/if}}">
+    <i class="bi bi-people" aria-hidden="true"></i> Users
+  </a>
+  {{/if}}
+  <div class="flex-1"></div>
+  <form method="POST" action="/logout">
+    <button type="submit" class="nav-link w-full cursor-pointer text-left">
+      <i class="bi bi-box-arrow-right" aria-hidden="true"></i> Sign out
+    </button>
+  </form>
+</nav>

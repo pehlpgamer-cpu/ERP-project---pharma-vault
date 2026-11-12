@@ -26,11 +26,6 @@ export default {
     return res.render("auth/forgotpassword", { pageTitle: "Forgot Password" });
   },
 
-  // Replaced by dashboardController in the shell task.
-  dashboardPage: (_req, res) => {
-    return res.render("dashboard", { pageTitle: "Dashboard" });
-  },
-
   login: async (req, res) => {
     let input;
 

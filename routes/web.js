@@ -6,6 +6,7 @@ const routeBuilder = new RouteBuilder(router);
 import { homePage } from "../app/http/controllers/homeController.js";
 import userController from "../app/http/controllers/userController.js";
 import authController from "../app/http/controllers/authController.js";
+import dashboardController from "../app/http/controllers/dashboardController.js";
 import asyncHandler from "../app/http/middleware/asyncHandler.js";
 import requireAuth from "../app/http/middleware/requireAuth.js";
 import auditTrailController from "../app/http/controllers/auditTrailController.js";
@@ -14,7 +15,7 @@ router.get("/", homePage);
 
 router.get("/register-page", authController.registerPage);
 router.get("/forgot-password-page", authController.forgotPasswordPage);
-router.get("/dashboard-page", requireAuth, authController.dashboardPage);
+router.get("/dashboard-page", requireAuth, dashboardController.index);
 router.get("/login-page", authController.loginPage);
 
 router.post("/login", asyncHandler(authController.login));

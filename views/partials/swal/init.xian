@@ -1,0 +1,138 @@
+{{!--
+  swal/init: SweetAlert2 glue for Xian pages. Gives every page three things:
+    1. Flash bridge   req.flash("success_msg" | "error_msg", text) -> toast / error modal on the next page.
+    2. data-confirm   ask before submitting a form, following a link, or running a fetch action.
+    3. window.xian    toast(), error(), confirm() for your own page scripts.
+
+  Install: copy to views/partials/swal/init.xian, then in views/partials/head.xian add the SweetAlert2
+  <script> tag followed by the partial call for swal/init (it must sit inside <head>, after the script tag).
+  Keep the <script> and <style> parts free of double curly braces: Handlebars would try to parse them.
+--}}
+{{#each success_msg}}
+<meta name="flash-success" content="{{this}}">
+{{/each}}
+{{#each error_msg}}
+<meta name="flash-error" content="{{this}}">
+{{/each}}
+<style type="text/tailwindcss">
+  /* buttons for SweetAlert2 popups (used with buttonsStyling: false so Tailwind, not Swal's CSS, styles them) */
+  .swal-btn { @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 mx-1 font-medium cursor-pointer duration-150 hover:scale-105; }
+  .swal-btn-confirm { @apply bg-red-600 text-white hover:bg-black; }
+  .swal-btn-cancel { @apply bg-gray-200 text-gray-900 hover:bg-gray-300; }
+</style>
+<script>
+  (() => {
+    const hasSwal = () => typeof Swal !== 'undefined';
+    let ui = null;
+    let toast = null;
+    const mixins = () => {
+      ui ??= Swal.mixin({
+        buttonsStyling: false,
+        reverseButtons: true,
+        customClass: {
+          confirmButton: 'swal-btn swal-btn-confirm',
+          cancelButton: 'swal-btn swal-btn-cancel',
+          denyButton: 'swal-btn swal-btn-cancel',
+        },
+      });
+      toast ??= Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3500, timerProgressBar: true });
+    };
+
+    // SweetAlert2 renders `title`, `html`, `confirmButtonText` and `cancelButtonText` as HTML, while `text` and
+    // `titleText` are plain text. Everything below uses the plain-text options (or esc()) so a flash message or
+    // data-* attribute that contains user input can never inject markup.
+    const esc = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+
+    const xian = {
+      // xian.toast('success', 'Saved')   small, non-blocking, closes itself. icon: success | error | warning | info
+      toast(icon, message) {
+        if (!hasSwal()) return console.info(`[${icon}] ${message}`);
+        mixins();
+        return toast.fire({ icon, titleText: message });
+      },
+      // xian.error('Could not delete')   modal the user has to dismiss
+      error(message, title = 'Something went wrong') {
+        if (!hasSwal()) return window.alert(message);
+        mixins();
+        return ui.fire({ icon: 'error', titleText: title, text: message, confirmButtonText: 'OK' });
+      },
+      // if (await xian.confirm('Delete paulo?')) ...   resolves true/false; falls back to window.confirm when the
+      // SweetAlert2 CDN failed to load, so a destructive action is never silently allowed.
+      // opts: { title, confirmText, icon } (all plain text)
+      async confirm(text, { title = 'Are you sure?', confirmText = 'Yes, continue', icon = 'warning' } = {}) {
+        if (!hasSwal()) return window.confirm(text);
+        mixins();
+        const result = await ui.fire({
+          icon,
+          titleText: title,
+          text,
+          showCancelButton: true,
+          confirmButtonText: esc(confirmText),
+          cancelButtonText: 'Cancel',
+          focusCancel: true,
+        });
+        return result.isConfirmed;
+      },
+    };
+    window.xian = xian;
+
+    // 1) flash messages rendered above as <meta> tags (text only, never HTML, so user input cannot inject markup)
+    document.addEventListener('DOMContentLoaded', () => {
+      const texts = (name) => [...document.querySelectorAll(`meta[name="${name}"]`)].map((m) => m.content);
+      const ok = texts('flash-success');
+      const bad = texts('flash-error');
+      if (ok.length) xian.toast('success', ok.join(' · '));
+      if (bad.length) xian.error(bad.join(' · '));
+    });
+
+    // 2) data-confirm on forms, links and fetch actions
+    const question = (el) =>
+      xian.confirm(el.dataset.confirm, {
+        title: el.dataset.confirmTitle || undefined,
+        confirmText: el.dataset.confirmButton || undefined,
+        icon: el.dataset.confirmIcon || undefined,
+      });
+
+    // <form data-confirm="Delete paulo?">  ask first, then really submit (keeps the clicked button's name/value)
+    document.addEventListener('submit', async (e) => {
+      const form = e.target;
+      if (!(form instanceof HTMLFormElement) || !form.dataset.confirm || form.dataset.confirmed) return;
+      e.preventDefault();
+      if (!(await question(form))) return;
+      form.dataset.confirmed = '1';
+      try {
+        form.requestSubmit(e.submitter);
+      } finally {
+        delete form.dataset.confirmed;
+      }
+    });
+
+    // <a href="/logout" data-confirm="Log out?">
+    // <button type="button" data-fetch-method="DELETE" data-fetch-url="/users/5" data-confirm="Delete user 5?">
+    // HTML forms only speak GET/POST, so PATCH/PUT/DELETE actions go through fetch. The server answers JSON
+    // ({ message } on failure, optional { redirect } on success) and can req.flash() a success_msg: the page
+    // reloads and the flash bridge above shows it.
+    document.addEventListener('click', async (e) => {
+      const el = e.target.closest('a[data-confirm], [data-fetch-method]');
+      if (!el) return;
+      e.preventDefault();
+      if (el.dataset.confirm && !(await question(el))) return;
+      if (!el.dataset.fetchMethod) {
+        location.href = el.href;
+        return;
+      }
+      try {
+        const res = await fetch(el.dataset.fetchUrl || el.getAttribute('href'), {
+          method: el.dataset.fetchMethod,
+          headers: { Accept: 'application/json' },
+        });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(body.message || `Request failed (${res.status})`);
+        if (body.redirect) location.assign(body.redirect);
+        else location.reload();
+      } catch (err) {
+        xian.error(err.message);
+      }
+    });
+  })();
+</script>

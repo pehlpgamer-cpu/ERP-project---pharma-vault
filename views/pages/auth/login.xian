@@ -4,6 +4,6 @@
     <input type="email" name="email" placeholder="Email" class="mb-2 p-2 border rounded" required />
     <input type="password" name="password" placeholder="Password" class="mb-2 p-2 border rounded" required />
     <button type="submit" class="bg-blue-500 text-white p-2 rounded">Login</button>
-    <a href="/register" class="text-blue-700 mt-2 text-center">Don't have an account? Register</a>
+    <a href="/register-page" class="text-blue-700 mt-2 text-center">Don't have an account? Register</a>
   </form>
 </div>
