@@ -412,6 +412,19 @@ test.group("checkout API: malformed or extreme input (review focus 3)", (group) 
     expect(await stockOf(ctx)).toBe("100.000");
     expect(await saleCount()).toBe(0);
   });
+
+  test("payments that add up to more than the system can record are a 422, never a 500", async ({
+    expect,
+  }) => {
+    const ctx = await counter();
+    const largest = { method: "CASH", amount: "999999999999.99" };
+
+    const response = await post(ctx.http, sale(ctx, { payments: [largest, largest] }));
+
+    expect([response.status, response.json().error.code]).toEqual([422, "payment_invalid"]);
+    expect(await stockOf(ctx)).toBe("100.000");
+    expect(await saleCount()).toBe(0);
+  });
 });
 
 test.group("checkout API: a double click (review focus 4)", (group) => {

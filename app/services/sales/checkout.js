@@ -35,6 +35,7 @@ import { allocateFefo } from "./fefo.js";
 const MAX_ATTEMPTS = 3;
 const MONEY_SCALE = 2;
 const QUANTITY_SCALE = 3;
+const LARGEST_AMOUNT = "999999999999.99";
 const PAYMENT_METHODS = ["CASH", "CARD", "GCASH", "MAYA", "BANK_TRANSFER", "OTHER"];
 
 const paymentInvalid = (message) => {
@@ -195,6 +196,11 @@ function checkPayments(payments, total) {
     ),
     MONEY_SCALE,
   );
+
+  // sales.amount_paid and change_amount are DECIMAL(14,2): more than this would be a database error
+  if (cmp(tendered, LARGEST_AMOUNT) > 0) {
+    throw paymentInvalid("The payments are more than can be recorded");
+  }
 
   if (cmp(tendered, total) < 0) {
     throw paymentInvalid("The payments do not cover the total");
