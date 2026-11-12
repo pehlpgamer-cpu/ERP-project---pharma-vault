@@ -158,7 +158,12 @@ export async function updateSupplier(user, id, input, { meta = {} } = {}) {
         entityType: "supplier",
         entityId: id,
         oldValues: Object.fromEntries(
-          [...FIELDS.map((field) => field.key), "isActive"].map((key) => {
+          [
+            ...FIELDS.map((field) => {
+              return field.key;
+            }),
+            "isActive",
+          ].map((key) => {
             return [key, before[key]];
           }),
         ),
