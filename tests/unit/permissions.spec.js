@@ -2,9 +2,11 @@ import { test } from "@japa/runner";
 import { can, PERMISSIONS, ROLE_PERMISSIONS } from "../../app/services/auth/permissions.js";
 
 test.group("permissions", () => {
-  test("PERMISSIONS holds exactly the fourteen names", ({ expect }) => {
+  test("PERMISSIONS holds exactly the sixteen names", ({ expect }) => {
     expect(Object.values(PERMISSIONS).sort()).toEqual([
       "dashboard.view",
+      "inventory.adjust",
+      "inventory.approve",
       "inventory.manage",
       "inventory.receive",
       "inventory.view",
@@ -59,9 +61,12 @@ test.group("permissions", () => {
       "inventory.view",
       "inventory.manage",
       "inventory.receive",
+      "inventory.adjust",
       "purchasing.view",
       "purchasing.manage",
     ]);
+    expect(ROLE_PERMISSIONS.admin).toContain("inventory.approve");
+    expect(ROLE_PERMISSIONS.pharmacist).not.toContain("inventory.approve");
     expect(ROLE_PERMISSIONS.accountant).toEqual([
       "dashboard.view",
       "sales.view.all",
