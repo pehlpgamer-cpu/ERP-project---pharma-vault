@@ -42,6 +42,10 @@
   </table>
 </div>
 
+{{#if needsOtherApprover}}
+<p class="mb-3 text-sm text-gray-600">You started this count, so someone else with approval rights must approve it.</p>
+{{/if}}
+
 <div class="flex flex-wrap items-start gap-3">
   {{#if canSubmit}}
   <form method="POST" action="/stock-counts/{{adjustment.id}}/submit"><button type="submit" class="btn">Submit for approval</button></form>

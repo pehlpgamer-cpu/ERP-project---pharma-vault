@@ -19,6 +19,7 @@ import { requestMeta } from "../support/requestMeta.js";
 
 const COUNTS = "/stock-counts";
 const BLANK_LINES = 3;
+const BATCH_LIMIT = 500;
 
 const statusLabel = (value) => {
   const text = value.replaceAll("_", " ").toLowerCase();
@@ -52,13 +53,16 @@ const lineRows = (lines, errors) => {
 };
 
 async function countForm(req, res, { values, lines, errors = {} }) {
+  const batchOptions = await listCountableBatches(req.user);
+
   return res.render("inventory/count-form", {
     pageTitle: "New stock count",
     layout: "authenticated",
     values,
     errors,
     lineRows: lineRows(lines, errors),
-    batchOptions: await listCountableBatches(req.user),
+    batchOptions,
+    batchesCapped: batchOptions.length >= BATCH_LIMIT,
   });
 }
 
@@ -71,6 +75,8 @@ function flagsFor(user, adjustment) {
     canSubmit: adjust && adjustment.status === "DRAFT",
     canApprove:
       approve && adjustment.status === "PENDING_APPROVAL" && adjustment.createdBy !== user.id,
+    needsOtherApprover:
+      approve && adjustment.status === "PENDING_APPROVAL" && adjustment.createdBy === user.id,
     canReject: approve && adjustment.status === "PENDING_APPROVAL",
     canPost: approve && adjustment.status === "APPROVED",
     canCancel: adjust && ["DRAFT", "PENDING_APPROVAL", "APPROVED"].includes(adjustment.status),

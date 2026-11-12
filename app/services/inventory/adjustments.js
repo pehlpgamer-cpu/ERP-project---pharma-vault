@@ -19,6 +19,7 @@ import { users } from "../../models/users.js";
 import { recordAudit } from "../audit/auditLog.js";
 import { can, PERMISSIONS } from "../auth/permissions.js";
 import { add, cmp, sub, toScale } from "../support/decimal.js";
+import { isDeadlock } from "../support/dbErrors.js";
 import { isUuid } from "../support/ids.js";
 import { businessDate } from "../support/time.js";
 import { nextDocumentNumber } from "../purchasing/numbers.js";
@@ -352,14 +353,27 @@ const stale = (batchNumber) => {
 
 /**
  * APPROVED → POSTED. Locks inventory rows, then batches (both in id order, after the document: the
- * order checkout and receiving use), refuses if any batch moved since the count, then sets each
+ * order checkout locks them: by product id), refuses if any batch moved since the count, then sets each
  * counted batch, writes one movement per changed line and adjusts the on-hand totals.
  */
-export async function postAdjustment(user, id, input, { now = new Date(), meta = {} } = {}) {
+export async function postAdjustment(user, id, input, options = {}) {
   if (!can(user, PERMISSIONS.INVENTORY_APPROVE)) {
     throw forbidden("You do not have permission for this step");
   }
 
+  // a sale locking the same rows can win a deadlock; nothing was written, so run it again
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await postOnce(user, id, options);
+    } catch (error) {
+      if (!isDeadlock(error) || attempt >= 3) {
+        throw error;
+      }
+    }
+  }
+}
+
+async function postOnce(user, id, { now = new Date(), meta = {} }) {
   return await db.transaction(
     async (tx) => {
       const adjustment = await lockAdjustment(tx, user, id, ["APPROVED"], "posted");
@@ -386,7 +400,7 @@ export async function postAdjustment(user, id, input, { now = new Date(), meta =
         .select()
         .from(inventories)
         .where(inArray(inventories.id, inventoryIds))
-        .orderBy(asc(inventories.id))
+        .orderBy(asc(inventories.productId))
         .for("update");
       const batches = await tx
         .select()

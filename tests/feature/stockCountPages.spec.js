@@ -183,6 +183,7 @@ test.group("stock count pages", (group) => {
       .where(eq(inventoryAdjustments.id, id));
 
     expect(page.text).not.toContain("/approve");
+    expect(page.text).toContain("someone else with approval rights");
     expect(approved.status).toBe(302);
     expect(row.status).toBe("PENDING_APPROVAL");
   });
