@@ -307,3 +307,49 @@ export function restoreCart(data) {
 
   return cart;
 }
+
+/**
+ * The attempt to send for the sale whose request body is `body` (JSON text). An attempt that got no
+ * definite answer (`pending`) may already be saved on the server, so it is sent again exactly as it
+ * was, with the same key: the server then answers with that sale instead of making a second one.
+ * Otherwise the same body keeps its key and a different body gets a new one.
+ */
+export function attemptFor(attempt, body, makeKey) {
+  if (attempt !== null && (attempt.pending || attempt.body === body)) {
+    return attempt;
+  }
+
+  return { key: makeKey(), body, pending: false };
+}
+
+/**
+ * What an answer to the checkout request proves. "saved": a 2xx. "refused": a 4xx that carries an
+ * error body, so the server looked at the request and saved nothing. "unknown": anything else (no
+ * answer at all, a server error, a proxy page): the sale may or may not exist.
+ */
+export function classifyOutcome(status, hasError) {
+  if (typeof status !== "number") {
+    return "unknown";
+  }
+
+  if (status >= 200 && status < 300) {
+    return "saved";
+  }
+
+  return status >= 400 && status < 500 && hasError ? "refused" : "unknown";
+}
+
+/** A pending attempt read back from storage, or null when what was stored is anything else. */
+export function restoreAttempt(data) {
+  if (
+    data === null ||
+    typeof data !== "object" ||
+    !isText(data.key) ||
+    !isText(data.body) ||
+    data.pending !== true
+  ) {
+    return null;
+  }
+
+  return { key: data.key, body: data.body, pending: true };
+}

@@ -1,12 +1,15 @@
 import { test } from "@japa/runner";
 import {
   addLine,
+  attemptFor,
   cartTotals,
   changeUnit,
+  classifyOutcome,
   emptyCart,
   normalizeAmount,
   normalizeQuantity,
   removeLine,
+  restoreAttempt,
   restoreCart,
   setQuantity,
   stepQuantity,
@@ -274,5 +277,87 @@ test.group("input helpers and storage", () => {
         ],
       }).lines,
     ).toMatchObject([{ productUnitId: "ok", quantity: "2" }]);
+  });
+});
+
+test.group("sale attempts (a lost answer must never become a second sale)", () => {
+  const keyMaker = () => {
+    let count = 0;
+
+    return () => {
+      count += 1;
+
+      return `key-${count}`;
+    };
+  };
+
+  test("the same sale keeps its key and a different sale gets a new one", ({ expect }) => {
+    const makeKey = keyMaker();
+    const first = attemptFor(null, '{"a":1}', makeKey);
+
+    expect(first).toEqual({ key: "key-1", body: '{"a":1}', pending: false });
+    expect(attemptFor(first, '{"a":1}', makeKey)).toBe(first);
+    expect(attemptFor(first, '{"a":2}', makeKey)).toEqual({
+      key: "key-2",
+      body: '{"a":2}',
+      pending: false,
+    });
+  });
+
+  test("an attempt that got no answer is sent again exactly as it was, whatever the cart says now", ({
+    expect,
+  }) => {
+    const makeKey = keyMaker();
+    const pending = { key: "key-1", body: '{"a":1}', pending: true };
+
+    expect(attemptFor(pending, '{"a":2}', makeKey)).toBe(pending);
+    expect(attemptFor(pending, '{"a":1}', makeKey)).toBe(pending);
+    expect(makeKey()).toBe("key-1");
+  });
+
+  test("only a 2xx is a saved sale and only a 4xx with an error body proves nothing was saved", ({
+    expect,
+  }) => {
+    for (const [status, hasError, outcome] of [
+      [201, false, "saved"],
+      [200, false, "saved"],
+      [401, true, "refused"],
+      [409, true, "refused"],
+      [422, true, "refused"],
+      [400, false, "unknown"],
+      [404, false, "unknown"],
+      [500, true, "unknown"],
+      [502, false, "unknown"],
+      [503, true, "unknown"],
+      [null, false, "unknown"],
+      [undefined, true, "unknown"],
+    ]) {
+      expect([status, hasError, classifyOutcome(status, hasError)]).toEqual([
+        status,
+        hasError,
+        outcome,
+      ]);
+    }
+  });
+
+  test("restoreAttempt brings back only a well-formed pending attempt", ({ expect }) => {
+    const saved = { key: "key-1", body: '{"a":1}', pending: true };
+
+    expect(restoreAttempt(JSON.parse(JSON.stringify(saved)))).toEqual(saved);
+
+    for (const bad of [
+      null,
+      undefined,
+      "junk",
+      42,
+      {},
+      { key: "key-1", body: "{}", pending: false },
+      { key: "key-1", body: "{}" },
+      { key: 1, body: "{}", pending: true },
+      { key: "key-1", body: 2, pending: true },
+      { body: "{}", pending: true },
+    ]) {
+      expect([bad, restoreAttempt(bad)]).toEqual([bad, null]);
+    }
   });
 });

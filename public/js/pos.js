@@ -4,11 +4,14 @@
 
 import {
   addLine,
+  attemptFor,
   cartTotals,
   changeUnit,
+  classifyOutcome,
   emptyCart,
   normalizeAmount,
   removeLine,
+  restoreAttempt,
   restoreCart,
   setQuantity,
   stepQuantity,
@@ -19,6 +22,7 @@ const root = document.getElementById("pos-root");
 const config = JSON.parse(root.dataset.config);
 
 const STORAGE_KEY = "pos-cart";
+const ATTEMPT_KEY = "pos-attempt";
 const SEARCH_DELAY_MS = 250;
 const METHODS = [
   ["CASH", "Cash"],
@@ -46,7 +50,7 @@ let results = [];
 let searched = false;
 let searchTicket = 0;
 let searchTimer = null;
-let attempt = null; // { key, fingerprint }: one Idempotency-Key per distinct sale attempt
+let attempt = null; // { key, body, pending }: one Idempotency-Key per distinct sale attempt
 let busy = false;
 
 function el(tag, { text, className, attrs = {}, on = {}, children = [] } = {}) {
@@ -129,9 +133,60 @@ function loadCart() {
   }
 }
 
+// A sale whose answer never arrived may already be saved. Its key and request outlive a reload and
+// the screen stays frozen until the server answers, so that sale can only be sent again with the same
+// key, never as a second sale.
+const locked = () => {
+  return attempt !== null && attempt.pending;
+};
+
+const LOCKED_MESSAGE =
+  "The last sale did not get an answer from the server, so it may already be saved. Press Complete sale to check it (it is not charged twice), or look for it under Sales.";
+
+function saveAttempt() {
+  try {
+    if (locked()) {
+      sessionStorage.setItem(ATTEMPT_KEY, JSON.stringify(attempt));
+    } else {
+      sessionStorage.removeItem(ATTEMPT_KEY);
+    }
+  } catch {
+    // storage unavailable: a pending sale then survives only until the page is reloaded
+  }
+}
+
+function loadAttempt() {
+  try {
+    const raw = sessionStorage.getItem(ATTEMPT_KEY);
+
+    return raw ? restoreAttempt(JSON.parse(raw)) : null;
+  } catch {
+    return null;
+  }
+}
+
+// Everything outside the cart's own rows is switched off while a sale waits for an answer.
+function refreshLock() {
+  const frozen = locked();
+
+  byId("pos-search").disabled = frozen;
+  byId("pos-add-payment").disabled = frozen;
+  byId("pos-exact").disabled = frozen;
+
+  if (frozen) {
+    say(LOCKED_MESSAGE);
+  } else if (byId("pos-status").textContent === LOCKED_MESSAGE) {
+    say("");
+  }
+}
+
 // ---- search ----
 
 function addState(product, unit) {
+  if (locked()) {
+    return { ok: false, reason: "Finish the last sale first" };
+  }
+
   if (product.requiresPrescription || product.classification !== "OTC") {
     return { ok: false, reason: "Needs a prescription: it cannot be sold at this counter" };
   }
@@ -299,7 +354,7 @@ function cartRow(line, subtotal) {
     line.units.length > 1
       ? el("select", {
           className: "mt-1 w-full rounded border border-gray-300 bg-white p-1 text-xs",
-          attrs: { "aria-label": `Unit for ${line.productName}` },
+          attrs: { "aria-label": `Unit for ${line.productName}`, disabled: locked() },
           on: {
             change: (event) => {
               const chosen = line.units.find((unit) => {
@@ -338,7 +393,11 @@ function cartRow(line, subtotal) {
     return el("button", {
       className: "btn px-2 py-0",
       text: symbol,
-      attrs: { type: "button", "aria-label": `${label} ${line.productName}` },
+      attrs: {
+        type: "button",
+        "aria-label": `${label} ${line.productName}`,
+        disabled: locked(),
+      },
       on: {
         click: () => {
           cart = stepQuantity(cart, line.productUnitId, delta);
@@ -355,6 +414,7 @@ function cartRow(line, subtotal) {
       inputmode: "decimal",
       value: line.quantity,
       "aria-label": `Quantity of ${line.productName}`,
+      disabled: locked(),
     },
     on: {
       change: (event) => {
@@ -391,7 +451,11 @@ function cartRow(line, subtotal) {
           el("button", {
             className: "btn px-2 py-0",
             text: "×",
-            attrs: { type: "button", "aria-label": `Remove ${line.productName}` },
+            attrs: {
+              type: "button",
+              "aria-label": `Remove ${line.productName}`,
+              disabled: locked(),
+            },
             on: {
               click: () => {
                 cart = removeLine(cart, line.productUnitId);
@@ -473,7 +537,7 @@ function updateTender() {
   byId("pos-tendered").textContent = money(summary.tendered);
   byId("pos-change").textContent = money(summary.change);
   byId("pos-remaining").textContent = money(summary.remaining);
-  byId("pos-complete").disabled = busy || !canComplete(summary);
+  byId("pos-complete").disabled = busy || !(locked() || canComplete(summary));
   byId("pos-complete").textContent = busy ? "Saving…" : "Complete sale";
 }
 
@@ -487,6 +551,7 @@ function paymentRow(payment, index) {
       "aria-label": "Payment reference",
       value: payment.reference,
       hidden: payment.method === "CASH",
+      disabled: locked(),
     },
     on: {
       input: (event) => {
@@ -501,7 +566,7 @@ function paymentRow(payment, index) {
     children: [
       el("select", {
         className: "field mt-0",
-        attrs: { "aria-label": "Payment method" },
+        attrs: { "aria-label": "Payment method", disabled: locked() },
         on: {
           change: (event) => {
             payment.method = event.target.value;
@@ -523,6 +588,7 @@ function paymentRow(payment, index) {
           placeholder: "0.00",
           "aria-label": "Payment amount",
           value: payment.amount,
+          disabled: locked(),
         },
         on: {
           input: (event) => {
@@ -535,7 +601,7 @@ function paymentRow(payment, index) {
         ? el("button", {
             className: "btn px-2 py-0",
             text: "×",
-            attrs: { type: "button", "aria-label": "Remove payment" },
+            attrs: { type: "button", "aria-label": "Remove payment", disabled: locked() },
             on: {
               click: () => {
                 payments = payments.filter((_, position) => {
@@ -603,11 +669,11 @@ function failureMessage(error, status) {
 async function completeSale() {
   const summary = tenderSummary(cartTotals(cart).total, activePayments());
 
-  if (busy || !canComplete(summary)) {
+  if (busy || !(locked() || canComplete(summary))) {
     return;
   }
 
-  const body = {
+  const request = {
     items: cart.lines.map((line) => {
       return { productUnitId: line.productUnitId, quantity: line.quantity };
     }),
@@ -620,15 +686,14 @@ async function completeSale() {
     }),
     customerId: null,
   };
-  const fingerprint = JSON.stringify(body);
 
-  // A retry of the same sale reuses its key, so a timeout can never charge the customer twice.
-  if (attempt === null || attempt.fingerprint !== fingerprint) {
-    attempt = { key: newKey(), fingerprint };
-  }
-
+  // The same sale keeps its key, and a sale that got no answer is sent again exactly as it was.
+  attempt = attemptFor(attempt, JSON.stringify(request), newKey);
   busy = true;
   updateTender();
+
+  let status = null;
+  let payload = null;
 
   try {
     const response = await fetch(config.salesUrl, {
@@ -639,30 +704,39 @@ async function completeSale() {
         Accept: "application/json",
         "Idempotency-Key": attempt.key,
       },
-      body: fingerprint,
+      body: attempt.body,
     });
-    const payload = await response.json().catch(() => {
+
+    status = response.status;
+    payload = await response.json().catch(() => {
       return null;
     });
-
-    if (response.ok && payload?.data?.id) {
-      cart = emptyCart();
-      saveCart();
-      attempt = null;
-      window.location.assign(`/sales/${encodeURIComponent(payload.data.id)}?print=1`);
-
-      return;
-    }
-
-    notify(failureMessage(payload?.error, response.status));
   } catch {
-    notify(
-      "The server could not be reached. Check the connection and press Complete again: the sale is not charged twice.",
-    );
-  } finally {
-    busy = false;
-    updateTender();
+    // no answer at all: the outcome stays unknown
   }
+
+  const outcome = classifyOutcome(status, payload?.error !== undefined);
+
+  busy = false;
+
+  if (outcome === "saved" && payload?.data?.id) {
+    cart = emptyCart();
+    saveCart();
+    attempt = null;
+    saveAttempt();
+    window.location.assign(`/sales/${encodeURIComponent(payload.data.id)}?print=1`);
+
+    return;
+  }
+
+  // A refusal proves nothing was saved. Anything else leaves the sale pending until it is answered.
+  attempt = outcome === "refused" ? null : { ...attempt, pending: true };
+  saveAttempt();
+  renderCart();
+  renderPayments();
+  renderResults();
+  refreshLock();
+  notify(outcome === "refused" ? failureMessage(payload.error, status) : LOCKED_MESSAGE);
 }
 
 // ---- wiring ----
@@ -706,11 +780,27 @@ byId("pos-add-payment").addEventListener("click", () => {
 });
 byId("pos-exact").addEventListener("click", fillExact);
 byId("pos-complete").addEventListener("click", completeSale);
-byId("pos-clear").addEventListener("click", () => {
+byId("pos-clear").addEventListener("click", async () => {
+  if (locked()) {
+    const question =
+      "The last sale may already be saved. Look under Sales before you start over. Start over anyway?";
+    const confirmed = window.xian
+      ? await window.xian.confirm(question, { confirmText: "Start over" })
+      : window.confirm(question);
+
+    if (!confirmed) {
+      return;
+    }
+  }
+
   cart = emptyCart();
   attempt = null;
   saveCart();
+  saveAttempt();
   renderCart();
+  renderPayments();
+  renderResults();
+  refreshLock();
   search.focus();
 });
 
@@ -727,7 +817,9 @@ document.addEventListener("keydown", (event) => {
 });
 
 cart = loadCart();
+attempt = loadAttempt();
 renderResults();
 renderCart();
 renderPayments();
+refreshLock();
 search.focus();
