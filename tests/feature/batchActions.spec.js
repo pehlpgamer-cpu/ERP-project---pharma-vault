@@ -325,7 +325,7 @@ test.group("reasons, kinds and scope", (group) => {
     expect((await row(ctx.batch.id)).status).toBe("ACTIVE");
   });
 
-  test("another branch's batch is a 404 for a pharmacist and allowed for the all-branch scope (review focus 3)", async ({
+  test("another branch's batch is a 404 for every actor, the all-branch scope included: view only (review focus 3)", async ({
     expect,
   }) => {
     const ctx = await setup();
@@ -346,9 +346,26 @@ test.group("reasons, kinds and scope", (group) => {
 
     expect([denied.status, denied.code]).toEqual([404, "not_found"]);
     expect((await row(batch.id)).status).toBe("ACTIVE");
-    expect((await quarantineBatch(admin, batch.id, { reason: "audit" })).status).toBe(
-      "QUARANTINED",
+    const adminDenied = await failure(quarantineBatch(admin, batch.id, { reason: "audit" }));
+
+    expect([adminDenied.status, adminDenied.code]).toEqual([404, "not_found"]);
+    expect((await row(batch.id)).status).toBe("ACTIVE");
+  });
+
+  test("writing off a batch that holds no stock is a 409 batch_state", async ({ expect }) => {
+    const ctx = await setup();
+    const empty = await makeProduct({
+      branchId: ctx.world.branch.id,
+      name: "Empty",
+      batches: [{ quantity: "0", batchNumber: "Z0" }],
+    });
+    const before = await totals();
+    const error = await failure(
+      writeOffBatch(ctx.manager, empty.batches[0].id, { reason: "x", kind: "damaged" }),
     );
+
+    expect([error.status, error.code]).toEqual([409, "batch_state"]);
+    expect(await totals()).toEqual(before);
   });
 
   test("unknown and malformed ids are a 404, never a 500", async ({ expect }) => {

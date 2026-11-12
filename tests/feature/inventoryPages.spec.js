@@ -243,6 +243,17 @@ test.group("inventory pages", (group) => {
     const crafted = await ctx.pharmacist.get("/inventory?branchId=not-a-uuid", HTML);
     const accountantNorth = await ctx.accountant.get(`/inventory?branchId=${north.id}`, HTML);
     const adminBatches = await ctx.admin.get(`/inventory/batches?branchId=${north.id}`, HTML);
+    const adminOwn = await ctx.admin.get("/inventory/batches", HTML);
+    const floating = await (
+      await loginAs(
+        await makeUser({
+          roleName: "floating-admin",
+          permissions: ROLE_PERMISSIONS.admin,
+          branchId: null,
+        }),
+      )
+    ).get("/inventory", HTML);
+    const keptBranch = await ctx.accountant.get(`/inventory?branchId=${north.id}&flag=nope`, HTML);
     const refused = await ctx.pharmacist.post(`/inventory/batches/${northBatch.id}/quarantine`, {
       ...HTML,
       form: { reason: "x" },
@@ -258,6 +269,13 @@ test.group("inventory pages", (group) => {
     expect(accountantNorth.text).toContain("Northern");
     expect(accountantNorth.text).toContain("NORTH");
     expect(adminBatches.text).toContain("N-OK");
+    expect(adminBatches.text).not.toContain("/quarantine");
+    expect(adminBatches.text).not.toContain("/write-off");
+    expect(adminOwn.text).toContain("/quarantine");
+    expect(floating.status).toBe(200);
+    expect(floating.text).toContain("NORTH");
+    expect(keptBranch.text).toContain("Some filters were not applied");
+    expect(keptBranch.text).toContain("Northern");
     expect(refused.status).toBe(404);
     expect(await status(northBatch.id)).toBe("ACTIVE");
   });

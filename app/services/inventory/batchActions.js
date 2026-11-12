@@ -11,8 +11,7 @@ import { inventories } from "../../models/inventories.js";
 import { inventoryBatches } from "../../models/inventory-batches.js";
 import { inventoryMovements } from "../../models/inventory-movements.js";
 import { recordAudit } from "../audit/auditLog.js";
-import { can, PERMISSIONS } from "../auth/permissions.js";
-import { sub, toScale } from "../support/decimal.js";
+import { cmp, sub, toScale } from "../support/decimal.js";
 import { isUuid } from "../support/ids.js";
 
 const MAX_REASON = 500;
@@ -56,8 +55,8 @@ async function act(user, batchId, reason, change, { now = new Date(), meta = {} 
         .select({ inventoryId: inventoryBatches.inventoryId, branchId: inventoryBatches.branchId })
         .from(inventoryBatches)
         .where(eq(inventoryBatches.id, batchId));
-
-      if (!probe || (probe.branchId !== user.branchId && !can(user, PERMISSIONS.SALES_VIEW_ALL))) {
+      // Actions stay in the actor's own branch; other branches are view only, even for sales.view.all.
+      if (!probe || probe.branchId !== user.branchId) {
         throw notFound();
       }
 
@@ -200,6 +199,10 @@ export async function writeOffBatch(user, batchId, input, options) {
     text,
     (batch) => {
       needs(batch, ["ACTIVE", "QUARANTINED"], "written off");
+
+      if (cmp(batch.quantityAvailable, "0") <= 0) {
+        throw wrongState("This batch holds no stock to write off");
+      }
 
       const { status, movement } = WRITE_OFF[kind];
 

@@ -20,6 +20,7 @@ import {
 import { paginate } from "../support/pagination.js";
 import { isSafeReturnTo } from "../support/returnTo.js";
 import { requestMeta } from "../support/requestMeta.js";
+import { isUuid } from "../../services/support/ids.js";
 
 const PER_PAGE = 20;
 const BATCHES = "/inventory/batches";
@@ -55,12 +56,27 @@ function parseFilters(parser, query) {
     }
 
     return {
-      filters: parser({}),
+      filters: {
+        ...parser({}),
+        branchId: isUuid(query?.branchId) ? query.branchId : undefined,
+      },
       filterErrors: error.details.map((detail) => {
         return `${detail.path}: ${detail.message}`;
       }),
     };
   }
+}
+
+// The branch to show: the requested one, else the user's own, else (all-branch users with no
+// branch of their own) the first branch.
+async function chosenBranch(user, requested) {
+  if (requested || user.branchId || !can(user, PERMISSIONS.SALES_VIEW_ALL)) {
+    return resolveBranch(user, requested);
+  }
+
+  const [first] = await listBranches();
+
+  return resolveBranch(user, first?.id);
 }
 
 async function branchChoices(user, branchId) {
@@ -128,7 +144,7 @@ function perform(name) {
 export default {
   index: async (req, res) => {
     const { filters, filterErrors } = parseFilters(overviewRequest, req.query);
-    const branchId = resolveBranch(req.user, filters.branchId);
+    const branchId = await chosenBranch(req.user, filters.branchId);
     const { rows } = await getStockOverview({ user: req.user, ...filters, branchId });
 
     return res.render("inventory/index", {
@@ -145,7 +161,7 @@ export default {
 
   batches: async (req, res) => {
     const { filters, filterErrors } = parseFilters(batchListRequest, req.query);
-    const branchId = resolveBranch(req.user, filters.branchId);
+    const branchId = await chosenBranch(req.user, filters.branchId);
     const { rows, total } = await listBatches({
       user: req.user,
       ...filters,
@@ -163,7 +179,7 @@ export default {
       total,
       filters: { q: filters.q ?? "" },
       filterErrors,
-      canManage: can(req.user, PERMISSIONS.INVENTORY_MANAGE),
+      canManage: can(req.user, PERMISSIONS.INVENTORY_MANAGE) && branchId === req.user.branchId,
       branchId,
       branchOptions: await branchChoices(req.user, branchId),
       statusOptions: selecting(
