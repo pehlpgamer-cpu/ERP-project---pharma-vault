@@ -277,7 +277,7 @@ export async function createPurchaseOrder(user, input, { now = new Date(), meta 
  * Locks the order, checks it is in the actor's branch and in one of the `from` states, and returns
  * the row. Anything else is a 404 (other branch, unknown id) or a 409.
  */
-async function lockOrder(tx, user, id, from, verb) {
+export async function lockOrder(tx, user, id, from, verb) {
   if (!isUuid(id)) {
     throw notFound();
   }
