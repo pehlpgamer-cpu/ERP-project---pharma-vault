@@ -3,6 +3,7 @@ import { count } from "drizzle-orm";
 import { branches } from "../../app/models/branches.js";
 import { closeDb, db } from "../client.js";
 import { seedBase } from "./base.js";
+import { seedHistory } from "./history.js";
 
 const DEFAULT_PASSWORD = "PharmaVault-demo-2026";
 
@@ -27,9 +28,13 @@ export async function runSeed({ log = console.log } = {}) {
     throw new Error("Database already seeded");
   }
 
-  const refs = await seedBase(db, { password });
+  const now = new Date();
+  const refs = await seedBase(db, { password, now });
+  const { sales } = await seedHistory(db, refs, { now });
 
-  log("Seeded demo data. Sign in with any of these accounts:");
+  log(
+    `Seeded demo data and ${sales} sales over the last 30 days. Sign in with any of these accounts:`,
+  );
 
   for (const user of Object.values(refs.users)) {
     log(`  ${user.email}  (${user.role})`);
