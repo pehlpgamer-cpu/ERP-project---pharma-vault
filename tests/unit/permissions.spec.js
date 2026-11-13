@@ -2,7 +2,7 @@ import { test } from "@japa/runner";
 import { can, PERMISSIONS, ROLE_PERMISSIONS } from "../../app/services/auth/permissions.js";
 
 test.group("permissions", () => {
-  test("PERMISSIONS holds exactly the eighteen names", ({ expect }) => {
+  test("PERMISSIONS holds exactly the twenty names", ({ expect }) => {
     expect(Object.values(PERMISSIONS).sort()).toEqual([
       "dashboard.view",
       "inventory.adjust",
@@ -21,8 +21,18 @@ test.group("permissions", () => {
       "sales.view.all",
       "sales.view.branch",
       "sales.view.own",
+      "transfers.approve",
+      "transfers.manage",
       "users.manage",
     ]);
+  });
+
+  test("transfers: admin and pharmacist manage them, only admin approves", ({ expect }) => {
+    expect(ROLE_PERMISSIONS.admin).toContain("transfers.approve");
+    expect(ROLE_PERMISSIONS.pharmacist).toContain("transfers.manage");
+    expect(ROLE_PERMISSIONS.pharmacist).not.toContain("transfers.approve");
+    expect(ROLE_PERMISSIONS.cashier).not.toContain("transfers.manage");
+    expect(ROLE_PERMISSIONS.accountant).not.toContain("transfers.manage");
   });
 
   test("can is any-of and false for a null user", ({ expect }) => {
@@ -80,6 +90,7 @@ test.group("permissions", () => {
       "purchasing.manage",
       "returns.create",
       "returns.approve",
+      "transfers.manage",
     ]);
     expect(ROLE_PERMISSIONS.admin).toContain("inventory.approve");
     expect(ROLE_PERMISSIONS.pharmacist).not.toContain("inventory.approve");
