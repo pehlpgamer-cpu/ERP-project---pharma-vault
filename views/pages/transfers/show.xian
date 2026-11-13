@@ -1,0 +1,106 @@
+{{!--
+  transfers/show: one transfer with its lines and the next steps for the viewer. Required: transfer, lines
+  (with toShip, toReceive), canSubmit, canApprove, canReject, canDispatch, canReceive, canClose, canCancel.
+--}}
+<div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+  {{> components/page-header title=transfer.transferNumber icon="truck"}}
+  <a href="/transfers" class="btn bg-gray-200"><i class="bi bi-list-ul" aria-hidden="true"></i> All transfers</a>
+</div>
+
+<section class="mb-4 grid gap-3 border border-gray-200 bg-white p-4 text-sm sm:grid-cols-2 lg:grid-cols-4" aria-label="Transfer details">
+  <div><span class="block text-gray-500">Status</span>{{badge transfer.status}}</div>
+  <div><span class="block text-gray-500">From</span>{{transfer.sourceBranchName}}</div>
+  <div><span class="block text-gray-500">To</span>{{transfer.destinationBranchName}}</div>
+  <div><span class="block text-gray-500">Requested by</span>{{transfer.requestedByName}}</div>
+  <div><span class="block text-gray-500">Approved by</span>{{#if transfer.approvedByName}}{{transfer.approvedByName}}{{else}}-{{/if}}</div>
+  <div><span class="block text-gray-500">Created</span>{{formatDateTime transfer.createdAt}}</div>
+  <div><span class="block text-gray-500">Shipped</span>{{#if transfer.shippedAt}}{{formatDateTime transfer.shippedAt}}{{else}}-{{/if}}</div>
+  <div><span class="block text-gray-500">Received</span>{{#if transfer.receivedAt}}{{formatDateTime transfer.receivedAt}}{{else}}-{{/if}}</div>
+</section>
+
+<div class="mb-4 overflow-x-auto border border-gray-200 bg-white">
+  <table class="w-full text-left text-sm">
+    <thead class="bg-gray-50 text-gray-600">
+      <tr>
+        <th class="cell">Product</th>
+        <th class="cell">Batch</th>
+        <th class="cell text-right">Requested</th>
+        <th class="cell text-right">Shipped</th>
+        <th class="cell text-right">Received</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each lines}}
+      <tr class="border-t border-gray-200">
+        <td class="cell">{{productName}} <span class="text-gray-500">{{sku}}</span></td>
+        <td class="cell">{{batchNumber}}{{#if expirationDate}} <span class="text-gray-500">exp {{expirationDate}}</span>{{/if}}</td>
+        <td class="cell text-right">{{formatNumber quantityRequested}}</td>
+        <td class="cell text-right">{{formatNumber quantityShipped}}</td>
+        <td class="cell text-right">{{formatNumber quantityReceived}}</td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+</div>
+
+<div class="flex flex-wrap items-start gap-3">
+  {{#if canSubmit}}
+  <form method="POST" action="/transfers/{{transfer.id}}/submit"><button type="submit" class="btn">Submit for approval</button></form>
+  {{/if}}
+  {{#if canApprove}}
+  <form method="POST" action="/transfers/{{transfer.id}}/approve"><button type="submit" class="btn">Approve</button></form>
+  {{/if}}
+  {{#if canReject}}
+  <details>
+    <summary class="btn cursor-pointer bg-gray-200">Reject</summary>
+    <form method="POST" action="/transfers/{{transfer.id}}/reject" class="mt-1 flex flex-col gap-1">
+      <input type="text" name="reason" required maxlength="500" placeholder="Why it is rejected" aria-label="Reason" class="field">
+      <button type="submit" class="btn">Reject transfer</button>
+    </form>
+  </details>
+  {{/if}}
+  {{#if canDispatch}}
+  <form method="POST" action="/transfers/{{transfer.id}}/dispatch" class="flex flex-col gap-2 border border-gray-200 bg-white p-3 text-sm" data-confirm="Dispatch this transfer? The stock leaves your batches now.">
+    <h2 class="font-semibold">Dispatch</h2>
+    <p class="text-gray-600">Enter what is really being shipped for each line (0 to the requested quantity).</p>
+    {{#each lines}}
+    <label class="text-gray-700">{{productName}}, lot {{batchNumber}}
+      <input type="hidden" name="lines[{{index}}][itemId]" value="{{id}}">
+      <input type="text" inputmode="decimal" name="lines[{{index}}][quantity]" value="{{toShip}}" class="field">
+    </label>
+    {{/each}}
+    <button type="submit" class="btn">Dispatch</button>
+  </form>
+  {{/if}}
+  {{#if canReceive}}
+  <form method="POST" action="/transfers/{{transfer.id}}/receive" class="flex flex-col gap-2 border border-gray-200 bg-white p-3 text-sm">
+    <h2 class="font-semibold">Record what arrived</h2>
+    <p class="text-gray-600">Check the quantity, batch label and condition of what arrived. Leave a line empty if none of it came yet.</p>
+    {{#each lines}}
+    <label class="text-gray-700">{{productName}}, lot {{batchNumber}} (up to {{formatNumber toReceive}})
+      <input type="hidden" name="lines[{{index}}][itemId]" value="{{id}}">
+      <input type="text" inputmode="decimal" name="lines[{{index}}][quantity]" value="{{toReceive}}" class="field">
+    </label>
+    {{/each}}
+    <button type="submit" class="btn">Record receipt</button>
+  </form>
+  {{/if}}
+  {{#if canClose}}
+  <details>
+    <summary class="cursor-pointer text-red-700 underline">Close with what arrived (shortage)</summary>
+    <form method="POST" action="/transfers/{{transfer.id}}/close" class="mt-1 flex flex-col gap-1" data-confirm="Close this transfer? The rest will not be received.">
+      <input type="text" name="reason" required maxlength="500" placeholder="What happened to the rest" aria-label="Reason" class="field">
+      <button type="submit" class="btn">Close transfer</button>
+    </form>
+  </details>
+  {{/if}}
+  {{#if canCancel}}
+  <details>
+    <summary class="cursor-pointer text-red-700 underline">Cancel transfer</summary>
+    <form method="POST" action="/transfers/{{transfer.id}}/cancel" class="mt-1 flex flex-col gap-1" data-confirm="Cancel this transfer? This cannot be undone.">
+      <input type="text" name="reason" required maxlength="500" placeholder="Reason" aria-label="Reason" class="field">
+      <button type="submit" class="btn">Cancel transfer</button>
+    </form>
+  </details>
+  {{/if}}
+</div>

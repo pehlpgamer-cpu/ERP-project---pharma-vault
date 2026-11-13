@@ -15,6 +15,7 @@ import productController from "../app/http/controllers/productController.js";
 import returnController from "../app/http/controllers/returnController.js";
 import salesController from "../app/http/controllers/salesController.js";
 import stockCountController from "../app/http/controllers/stockCountController.js";
+import transferController from "../app/http/controllers/transferController.js";
 import supplierController from "../app/http/controllers/supplierController.js";
 import asyncHandler from "../app/http/middleware/asyncHandler.js";
 import canSell from "../app/http/middleware/canSell.js";
@@ -156,6 +157,36 @@ for (const [path, guard, handler] of [
   ["post", canApproveStock, stockCountController.post],
 ]) {
   router.post(`/stock-counts/:id/${path}`, requireAuth, guard, asyncHandler(handler));
+}
+
+const canManageTransfers = requirePermission(PERMISSIONS.TRANSFERS_MANAGE);
+const canApproveTransfers = requirePermission(PERMISSIONS.TRANSFERS_APPROVE);
+const canSeeTransfers = requirePermission(
+  PERMISSIONS.TRANSFERS_MANAGE,
+  PERMISSIONS.TRANSFERS_APPROVE,
+);
+
+// /transfers/new is registered before /transfers/:id so "new" is never read as an id.
+router.get("/transfers", requireAuth, canSeeTransfers, asyncHandler(transferController.index));
+router.get(
+  "/transfers/new",
+  requireAuth,
+  canManageTransfers,
+  asyncHandler(transferController.newForm),
+);
+router.post("/transfers", requireAuth, canManageTransfers, asyncHandler(transferController.create));
+router.get("/transfers/:id", requireAuth, canSeeTransfers, asyncHandler(transferController.show));
+
+for (const [path, guard, handler] of [
+  ["submit", canManageTransfers, transferController.submit],
+  ["dispatch", canManageTransfers, transferController.dispatch],
+  ["receive", canManageTransfers, transferController.receive],
+  ["close", canManageTransfers, transferController.close],
+  ["cancel", canSeeTransfers, transferController.cancel],
+  ["approve", canApproveTransfers, transferController.approve],
+  ["reject", canApproveTransfers, transferController.reject],
+]) {
+  router.post(`/transfers/:id/${path}`, requireAuth, guard, asyncHandler(handler));
 }
 
 const canViewPurchasing = requirePermission(PERMISSIONS.PURCHASING_VIEW);

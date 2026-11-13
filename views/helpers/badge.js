@@ -28,6 +28,8 @@ const STATUS_COLORS = {
   FULLY_RECEIVED: "green",
   POSTED: "green",
   PROCESSED: "green",
+  RECEIVED: "green",
+  IN_TRANSIT: "blue",
   CANCELLED: "red",
   REJECTED: "red",
 };
