@@ -22,7 +22,14 @@ import {
   submitTransfer,
 } from "../../app/services/inventory/transfers.js";
 import { resetDatabase } from "../helpers/db.js";
-import { makeAuthUser, makeBranch, makeProduct } from "../helpers/factories.js";
+import { auditLogs } from "../../app/models/audit-logs.js";
+import { makeAuthUser, makeBranch, makeProduct, makeStock } from "../helpers/factories.js";
+
+const won = (runs) => {
+  return runs.filter((run) => {
+    return run.status === "fulfilled";
+  }).length;
+};
 
 const NOW = new Date("2026-11-13T02:00:00Z");
 
@@ -427,5 +434,192 @@ test.group("stock transfers", (group) => {
       }),
     ).toEqual(["LOT-A", "LOT-B"]);
     expect(await listTransferableBatches(ctx.requester, ctx.north.id)).toEqual([]);
+  });
+  test("lines of several products ship and arrive together, into stock the destination already holds", async ({
+    expect,
+  }) => {
+    const ctx = await setup();
+    const other = await makeProduct({
+      branchId: ctx.main.id,
+      units: [{ name: "Tablet", factor: "1", base: true }],
+      batches: [{ quantity: "70", batchNumber: "LOT-P2" }],
+    });
+
+    await makeStock({
+      productId: ctx.stock.product.id,
+      branchId: ctx.north.id,
+      batches: [{ quantity: "10", batchNumber: "LOT-N" }],
+    });
+
+    const { id } = await createTransfer(
+      ctx.requester,
+      {
+        sourceBranchId: ctx.main.id,
+        lines: [
+          { sourceBatchId: ctx.a.id, quantity: "100" },
+          { sourceBatchId: ctx.b.id, quantity: "20" },
+          { sourceBatchId: other.batches[0].id, quantity: "50" },
+        ],
+      },
+      { now: NOW },
+    );
+
+    await submitTransfer(ctx.requester, id, {}, { now: NOW });
+    await approveTransfer(ctx.approver, id, {}, { now: NOW });
+
+    const items = await itemsOf(id);
+    const byBatch = (batch) => {
+      return items.find((item) => {
+        return item.sourceInventoryBatchId === batch.id;
+      });
+    };
+    const ship = { [ctx.a.id]: "100", [ctx.b.id]: "0", [other.batches[0].id]: "50" };
+
+    await dispatchTransfer(
+      ctx.shipper,
+      id,
+      {
+        lines: [
+          ...[ctx.a, ctx.b, other.batches[0]].map((batch) => {
+            return { itemId: byBatch(batch).id, quantity: ship[batch.id] };
+          }),
+          { itemId: "00000000-0000-4000-8000-000000000000", quantity: "5" },
+        ],
+      },
+      { now: NOW },
+    );
+
+    const [mainOne] = await db
+      .select()
+      .from(inventories)
+      .where(eq(inventories.id, ctx.a.inventoryId));
+    const [mainTwo] = await db
+      .select()
+      .from(inventories)
+      .where(eq(inventories.id, other.inventoryId));
+
+    expect(mainOne.quantityOnHand).toBe("440.000");
+    expect(mainTwo.quantityOnHand).toBe("20.000");
+    expect((await batchOf(ctx.b)).quantityAvailable).toBe("40.000");
+
+    const fresh = await itemsOf(id);
+    const arrive = fresh.map((item) => {
+      return { itemId: item.id, quantity: item.quantityShipped };
+    });
+    const result = await receiveTransfer(ctx.requester, id, { lines: arrive }, { now: NOW });
+    const north = await db.select().from(inventories).where(eq(inventories.branchId, ctx.north.id));
+    const onHand = Object.fromEntries(
+      north.map((row) => {
+        return [row.productId, row.quantityOnHand];
+      }),
+    );
+
+    // the shipped-as-zero line needs nothing more to be complete
+    expect(result.status).toBe("RECEIVED");
+    expect(onHand[ctx.stock.product.id]).toBe("110.000");
+    expect(onHand[other.product.id]).toBe("50.000");
+    expect(
+      (await itemsOf(id)).filter((item) => {
+        return item.destinationInventoryBatchId !== null;
+      }),
+    ).toHaveLength(2);
+  });
+
+  test("lots recalled or expired in transit arrive as such, not as sellable stock", async ({
+    expect,
+  }) => {
+    const ctx = await setup();
+    const id = await approved(ctx, "100");
+
+    await shipAll(ctx, id, "100");
+    await db
+      .update(inventoryBatches)
+      .set({ status: "RECALLED" })
+      .where(eq(inventoryBatches.id, ctx.a.id));
+
+    const [item] = await itemsOf(id);
+
+    await receiveTransfer(
+      ctx.requester,
+      id,
+      { lines: [{ itemId: item.id, quantity: "100" }] },
+      { now: NOW },
+    );
+
+    const [copy] = await db
+      .select()
+      .from(inventoryBatches)
+      .where(
+        and(eq(inventoryBatches.branchId, ctx.north.id), eq(inventoryBatches.batchNumber, "LOT-A")),
+      );
+
+    expect(copy.batchNumber).toBe("LOT-A");
+    expect(copy.status).toBe("RECALLED");
+  });
+
+  test("closing a shortage records what was short", async ({ expect }) => {
+    const ctx = await setup();
+    const id = await approved(ctx, "100");
+
+    await shipAll(ctx, id, "100");
+
+    const [item] = await itemsOf(id);
+
+    await receiveTransfer(
+      ctx.requester,
+      id,
+      { lines: [{ itemId: item.id, quantity: "70" }] },
+      { now: NOW },
+    );
+    await closeTransfer(ctx.requester, id, { reason: "Box crushed" }, { now: NOW });
+
+    const [row] = await db
+      .select()
+      .from(auditLogs)
+      .where(eq(auditLogs.action, "TRANSFER_CLOSED_SHORT"));
+    const text = JSON.stringify(row);
+
+    expect(text).toContain("Box crushed");
+    expect(text).toContain("30.000");
+    expect(text).toContain("LOT-A");
+  });
+
+  test("two people acting at once: one dispatch and one receipt win, stock is conserved", async ({
+    expect,
+  }) => {
+    const ctx = await setup();
+    const id = await approved(ctx, "100");
+    const [item] = await itemsOf(id);
+    const send = () => {
+      return dispatchTransfer(
+        ctx.shipper,
+        id,
+        { lines: [{ itemId: item.id, quantity: "100" }] },
+        { now: NOW },
+      );
+    };
+    const dispatches = await Promise.allSettled([send(), send()]);
+
+    expect(won(dispatches)).toBe(1);
+    expect((await batchOf(ctx.a)).quantityAvailable).toBe("400.000");
+
+    const take = () => {
+      return receiveTransfer(
+        ctx.requester,
+        id,
+        { lines: [{ itemId: item.id, quantity: "100" }] },
+        { now: NOW },
+      );
+    };
+    const receipts = await Promise.allSettled([take(), take()]);
+    const [copy] = await db
+      .select()
+      .from(inventoryBatches)
+      .where(
+        and(eq(inventoryBatches.branchId, ctx.north.id), eq(inventoryBatches.batchNumber, "LOT-A")),
+      );
+
+    expect(won(receipts)).toBe(1);
+    expect(copy.quantityAvailable).toBe("100.000");
   });
 });

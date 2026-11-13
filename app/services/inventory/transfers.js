@@ -20,7 +20,7 @@ import { users } from "../../models/users.js";
 import { recordAudit } from "../audit/auditLog.js";
 import { can, PERMISSIONS } from "../auth/permissions.js";
 import { nextDocumentNumber } from "../purchasing/numbers.js";
-import { add, cmp, sub, sum, toScale } from "../support/decimal.js";
+import { add, cmp, mul, sub, sum, toScale } from "../support/decimal.js";
 import { isDeadlock } from "../support/dbErrors.js";
 import { isUuid } from "../support/ids.js";
 import { businessDate, toDateString } from "../support/time.js";
@@ -300,7 +300,7 @@ async function move(user, id, input, rule, { now = new Date(), meta = {} } = {})
         entityType: "stock_transfer",
         entityId: id,
         oldValues: { status: row.status },
-        newValues: { status: rule.to },
+        newValues: { status: rule.to, ...(rule.audit ? await rule.audit(tx, row) : {}) },
         reason,
         ...meta,
       });
@@ -361,6 +361,39 @@ const RULES = {
     to: "RECEIVED",
     verb: "closed",
     action: "TRANSFER_CLOSED_SHORT",
+    // the evidence: per line what was shipped, what arrived and what is missing, and its cost
+    audit: async (tx, row) => {
+      const lines = await tx
+        .select({
+          batchNumber: inventoryBatches.batchNumber,
+          shipped: stockTransferItems.quantityShipped,
+          received: stockTransferItems.quantityReceived,
+          unitCost: inventoryBatches.unitCost,
+        })
+        .from(stockTransferItems)
+        .innerJoin(
+          inventoryBatches,
+          eq(inventoryBatches.id, stockTransferItems.sourceInventoryBatchId),
+        )
+        .where(eq(stockTransferItems.stockTransferId, row.id));
+      const shortages = lines
+        .map((line) => {
+          const short = toScale(sub(line.shipped, line.received), 3);
+
+          return {
+            batch: line.batchNumber,
+            shipped: toScale(line.shipped, 3),
+            received: toScale(line.received, 3),
+            short,
+            cost: toScale(mul(short, line.unitCost), 2),
+          };
+        })
+        .filter((line) => {
+          return cmp(line.short, "0") > 0;
+        });
+
+      return { shortages };
+    },
     needs: [PERMISSIONS.TRANSFERS_MANAGE],
     reason: "required",
     set: (user, now) => {
@@ -608,6 +641,16 @@ async function dispatchOnce(user, id, input, { now = new Date(), meta = {} }) {
   );
 }
 
+const arrivalStatus = (source, today) => {
+  if (["RECALLED", "QUARANTINED", "EXPIRED"].includes(source.status)) {
+    return source.status;
+  }
+
+  const expiry = toDateString(source.expirationDate);
+
+  return expiry !== null && expiry < today ? "EXPIRED" : "ACTIVE";
+};
+
 /** Makes sure the product has an inventory row in the branch and locks it. */
 async function lockInventory(tx, branchId, productId) {
   await tx
@@ -726,7 +769,8 @@ async function receiveOnce(user, id, input, { now = new Date(), meta = {} }) {
             quantityAvailable: quantity,
             unitCost: source.unitCost,
             receivedAt: now,
-            status: "ACTIVE",
+            // a lot recalled, quarantined or out of date in transit must not arrive as sellable
+            status: arrivalStatus(source, businessDate(now)),
           });
         } else {
           const [batch] = await tx
