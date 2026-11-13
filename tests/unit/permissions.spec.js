@@ -2,7 +2,7 @@ import { test } from "@japa/runner";
 import { can, PERMISSIONS, ROLE_PERMISSIONS } from "../../app/services/auth/permissions.js";
 
 test.group("permissions", () => {
-  test("PERMISSIONS holds exactly the twenty names", ({ expect }) => {
+  test("PERMISSIONS holds exactly the twenty-two names", ({ expect }) => {
     expect(Object.values(PERMISSIONS).sort()).toEqual([
       "dashboard.view",
       "inventory.adjust",
@@ -10,6 +10,8 @@ test.group("permissions", () => {
       "inventory.manage",
       "inventory.receive",
       "inventory.view",
+      "prescriptions.manage",
+      "prescriptions.verify",
       "products.manage",
       "purchasing.approve",
       "purchasing.manage",
@@ -42,14 +44,23 @@ test.group("permissions", () => {
     expect(can(null, "a")).toBe(false);
   });
 
-  test("the cashier role has exactly five permissions", ({ expect }) => {
+  test("the cashier role has exactly six permissions", ({ expect }) => {
     expect(ROLE_PERMISSIONS.cashier).toEqual([
       "dashboard.view",
       "sales.view.own",
       "sales.create",
       "register.manage",
       "returns.create",
+      "prescriptions.manage",
     ]);
+  });
+
+  test("prescriptions: cashiers record them, only admin and pharmacist verify", ({ expect }) => {
+    expect(ROLE_PERMISSIONS.cashier).toContain("prescriptions.manage");
+    expect(ROLE_PERMISSIONS.cashier).not.toContain("prescriptions.verify");
+    expect(ROLE_PERMISSIONS.pharmacist).toContain("prescriptions.verify");
+    expect(ROLE_PERMISSIONS.admin).toContain("prescriptions.verify");
+    expect(ROLE_PERMISSIONS.accountant).not.toContain("prescriptions.manage");
   });
 
   test("returns: everyone who sells may start one, only admin and pharmacist may approve", ({
@@ -91,6 +102,8 @@ test.group("permissions", () => {
       "returns.create",
       "returns.approve",
       "transfers.manage",
+      "prescriptions.manage",
+      "prescriptions.verify",
     ]);
     expect(ROLE_PERMISSIONS.admin).toContain("inventory.approve");
     expect(ROLE_PERMISSIONS.pharmacist).not.toContain("inventory.approve");

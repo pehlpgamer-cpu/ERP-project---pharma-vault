@@ -19,6 +19,8 @@ export const PERMISSIONS = Object.freeze({
   RETURNS_APPROVE: "returns.approve",
   TRANSFERS_MANAGE: "transfers.manage",
   TRANSFERS_APPROVE: "transfers.approve",
+  PRESCRIPTIONS_MANAGE: "prescriptions.manage",
+  PRESCRIPTIONS_VERIFY: "prescriptions.verify",
 });
 
 /** Which permissions each seeded role holds (the seed and the tests share this table). */
@@ -39,6 +41,8 @@ export const ROLE_PERMISSIONS = Object.freeze({
     PERMISSIONS.RETURNS_CREATE,
     PERMISSIONS.RETURNS_APPROVE,
     PERMISSIONS.TRANSFERS_MANAGE,
+    PERMISSIONS.PRESCRIPTIONS_MANAGE,
+    PERMISSIONS.PRESCRIPTIONS_VERIFY,
   ]),
   cashier: Object.freeze([
     PERMISSIONS.DASHBOARD_VIEW,
@@ -46,6 +50,7 @@ export const ROLE_PERMISSIONS = Object.freeze({
     PERMISSIONS.SALES_CREATE,
     PERMISSIONS.REGISTER_MANAGE,
     PERMISSIONS.RETURNS_CREATE,
+    PERMISSIONS.PRESCRIPTIONS_MANAGE,
   ]),
   accountant: Object.freeze([
     PERMISSIONS.DASHBOARD_VIEW,

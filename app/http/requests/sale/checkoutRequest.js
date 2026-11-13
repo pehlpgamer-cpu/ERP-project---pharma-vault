@@ -51,6 +51,12 @@ const Checkout = z.object({
     .array(Payment, { error: "payments must be a list" })
     .min(1, "Add at least one payment")
     .max(MAX_PAYMENTS, `A sale can have at most ${MAX_PAYMENTS} payments`),
+  prescriptionId: z
+    .uuid({ error: "prescriptionId must be a UUID" })
+    .nullish()
+    .transform((value) => {
+      return value ?? null;
+    }),
   customerId: z
     .uuid({ error: "customerId must be a UUID" })
     .nullish()

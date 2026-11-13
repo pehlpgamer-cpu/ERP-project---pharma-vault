@@ -31,6 +31,7 @@ import { isUuid } from "../support/ids.js";
 import { expiryBufferDays } from "../support/settings.js";
 import { addDays, businessDate } from "../support/time.js";
 import { allocateFefo } from "./fefo.js";
+import { applyDispensing, checkQuantities, loadDispensable } from "./prescriptions.js";
 
 const MAX_ATTEMPTS = 3;
 const MONEY_SCALE = 2;
@@ -80,7 +81,7 @@ const trimmed = (value) => {
 };
 
 // Step 2: the cart as priced lines, or the first rule it breaks. Reads only, nothing is locked yet.
-async function resolveLines(tx, items, { branchId, now }) {
+async function resolveLines(tx, items, { branchId, now, rxProducts = new Set() }) {
   if (!Array.isArray(items) || items.length === 0) {
     throw invalidField("items", "Add at least one item");
   }
@@ -132,7 +133,10 @@ async function resolveLines(tx, items, { branchId, now }) {
       throw invalidField(`items.${index}.productUnitId`, "Unknown or unavailable unit");
     }
 
-    if (unit.classification !== "OTC" || unit.requiresPrescription) {
+    const needsRx = unit.classification !== "OTC" || unit.requiresPrescription;
+
+    // a prescription that lists the product (and was verified) lets it be sold
+    if (needsRx && !rxProducts.has(unit.productId)) {
       throw new HttpError(
         422,
         "prescription_required",
@@ -157,6 +161,7 @@ async function resolveLines(tx, items, { branchId, now }) {
     }
 
     return {
+      needsRx,
       productId: unit.productId,
       productUnitId: unit.productUnitId,
       productName: unit.productName,
@@ -362,8 +367,39 @@ async function postSale(tx, { user, input, key, now, onStep, meta }) {
     .innerJoin(branches, eq(branches.id, cashRegisters.branchId))
     .where(eq(cashRegisters.id, session.cashRegisterId));
 
-  // 2. price the cart and check the payments, before anything else is locked
-  const lines = await resolveLines(tx, input.items, { branchId, now });
+  // 2. the prescription (locked: after the register session, before any stock), then price the cart
+  const today = businessDate(now);
+  const rx = input.prescriptionId ? await loadDispensable(tx, input.prescriptionId, today) : null;
+  const lines = await resolveLines(tx, input.items, {
+    branchId,
+    now,
+    rxProducts: new Set(
+      (rx?.items ?? []).map((item) => {
+        return item.productId;
+      }),
+    ),
+  });
+  const rxWanted = new Map();
+
+  for (const line of lines) {
+    if (rx && line.needsRx) {
+      rxWanted.set(line.productId, add(rxWanted.get(line.productId) ?? "0", line.baseQuantity));
+    }
+  }
+
+  if (rx) {
+    if (rxWanted.size === 0) {
+      throw new HttpError(
+        422,
+        "prescription_unused",
+        "None of the items needs this prescription, so it cannot be attached",
+        [{ path: "prescriptionId", message: "Not used by any item" }],
+      );
+    }
+
+    checkQuantities(rx.items, rxWanted);
+  }
+
   const subtotal = toScale(
     sum(
       lines.map((line) => {
@@ -374,7 +410,13 @@ async function postSale(tx, { user, input, key, now, onStep, meta }) {
   );
   const total = subtotal;
   const { tendered, change } = checkPayments(input.payments, total);
-  const customerId = input.customerId ?? null;
+  const rxCustomer = rx?.prescription.customerId ?? null;
+
+  if (input.customerId && rxCustomer && input.customerId !== rxCustomer) {
+    throw invalidField("customerId", "This prescription belongs to another customer");
+  }
+
+  const customerId = input.customerId ?? rxCustomer ?? null;
 
   if (customerId !== null) {
     const known = isUuid(customerId)
@@ -418,7 +460,6 @@ async function postSale(tx, { user, input, key, now, onStep, meta }) {
   }
 
   // 4. take the stock
-  const today = businessDate(now);
   const { results, soldByProduct } = await allocateStock(tx, lines, {
     branchId,
     today,
@@ -506,6 +547,9 @@ async function postSale(tx, { user, input, key, now, onStep, meta }) {
 
   await tx.insert(saleItems).values(itemRows);
   await tx.insert(saleItemBatches).values(itemBatchRows);
+
+  const rxStatus = rx ? await applyDispensing(tx, { ...rx, saleId, wanted: rxWanted, now }) : null;
+
   await onStep?.("sale-inserted");
 
   await tx.insert(inventoryMovements).values(movementRows);
@@ -562,7 +606,14 @@ async function postSale(tx, { user, input, key, now, onStep, meta }) {
     action: "SALE_COMPLETED",
     entityType: "sale",
     entityId: saleId,
-    newValues: { invoiceNumber, total, amountPaid: tendered, change, lines: lines.length },
+    newValues: {
+      invoiceNumber,
+      total,
+      amountPaid: tendered,
+      change,
+      lines: lines.length,
+      ...(rx ? { prescriptionId: rx.prescription.id, prescriptionStatus: rxStatus } : {}),
+    },
     ...meta,
   });
   await onStep?.("ledger-written");
