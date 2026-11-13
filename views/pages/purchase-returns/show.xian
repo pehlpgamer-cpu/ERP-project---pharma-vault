@@ -26,6 +26,7 @@
         <th class="cell">Product</th>
         <th class="cell">Batch</th>
         <th class="cell text-right">Quantity</th>
+        <th class="cell text-right">In batch now</th>
         <th class="cell text-right">Unit cost</th>
         <th class="cell text-right">Value</th>
       </tr>
@@ -36,6 +37,7 @@
         <td class="cell">{{productName}} <span class="text-gray-500">{{sku}}</span></td>
         <td class="cell">{{batchNumber}} {{badge batchStatus}}</td>
         <td class="cell text-right">{{formatNumber quantity}}</td>
+        <td class="cell text-right">{{formatNumber availableNow}}{{#if short}} <span class="block text-xs text-red-700">not enough</span>{{/if}}</td>
         <td class="cell text-right">{{currency unitCost}}</td>
         <td class="cell text-right">{{currency value}}</td>
       </tr>

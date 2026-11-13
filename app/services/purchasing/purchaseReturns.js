@@ -66,8 +66,8 @@ async function checkDraft(tx, user, input) {
     ? await tx.select().from(suppliers).where(eq(suppliers.id, supplierId))
     : [];
 
-  if (!supplier) {
-    errors.push({ path: "supplierId", message: "Choose the supplier it goes back to" });
+  if (!supplier || !supplier.isActive) {
+    errors.push({ path: "supplierId", message: "Choose an active supplier to send it back to" });
   }
 
   if (reason === "" || reason.length > MAX_REASON) {
@@ -257,6 +257,8 @@ async function move(user, id, input, rule, { now = new Date(), meta = {} } = {})
     async (tx) => {
       const row = await lockReturn(tx, user, id, rule.from, rule.verb);
 
+      await rule.check?.(tx, row);
+
       if (rule.distinct && row.createdBy === user.id) {
         throw forbidden("A different person must approve a return");
       }
@@ -283,6 +285,28 @@ async function move(user, id, input, rule, { now = new Date(), meta = {} } = {})
   );
 }
 
+// Throws 409 return_stock when a batch of the return cannot give its quantity right now (not locked).
+async function checkAvailable(tx, id) {
+  const rows = await tx
+    .select({
+      quantity: purchaseReturnItems.quantity,
+      batchNumber: inventoryBatches.batchNumber,
+      status: inventoryBatches.status,
+      available: inventoryBatches.quantityAvailable,
+    })
+    .from(purchaseReturnItems)
+    .innerJoin(inventoryBatches, eq(inventoryBatches.id, purchaseReturnItems.inventoryBatchId))
+    .where(eq(purchaseReturnItems.purchaseReturnId, id));
+
+  for (const row of rows) {
+    if (!RETURNABLE.includes(row.status) || cmp(row.available, row.quantity) < 0) {
+      throw stale(
+        `Batch ${row.batchNumber} no longer holds ${toScale(row.quantity, 3)}. Cancel this return and draft it again.`,
+      );
+    }
+  }
+}
+
 const RULES = {
   submit: {
     from: ["DRAFT"],
@@ -298,6 +322,10 @@ const RULES = {
     action: "PURCHASE_RETURN_APPROVED",
     needs: [PERMISSIONS.PURCHASING_APPROVE],
     distinct: true,
+    // do not pass a return that could not be posted now on to the next person
+    check: async (tx, row) => {
+      await checkAvailable(tx, row.id);
+    },
     set: (user, now) => {
       return { approvedBy: user.id, approvedAt: now };
     },
@@ -430,7 +458,7 @@ async function postOnce(user, id, { now = new Date(), meta = {} }) {
           .update(inventoryBatches)
           .set({
             quantityAvailable: after,
-            status: cmp(after, "0") === 0 ? "DEPLETED" : batch.status,
+            status: cmp(after, "0") === 0 && batch.status === "ACTIVE" ? "DEPLETED" : batch.status,
           })
           .where(eq(inventoryBatches.id, batch.id));
         await tx.insert(inventoryMovements).values({
@@ -537,6 +565,7 @@ export async function getPurchaseReturn(user, id) {
       productName: products.productName,
       batchNumber: inventoryBatches.batchNumber,
       batchStatus: inventoryBatches.status,
+      available: inventoryBatches.quantityAvailable,
       quantity: purchaseReturnItems.quantity,
       unitCost: purchaseReturnItems.unitCost,
     })
@@ -553,6 +582,8 @@ export async function getPurchaseReturn(user, id) {
     return {
       ...line,
       quantity: toScale(line.quantity, 3),
+      availableNow: toScale(line.available, 3),
+      short: cmp(line.available, line.quantity) < 0,
       unitCost: toScale(line.unitCost, 4),
       value: toScale(mul(line.quantity, line.unitCost), 2),
     };

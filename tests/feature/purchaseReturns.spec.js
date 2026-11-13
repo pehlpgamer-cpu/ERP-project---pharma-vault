@@ -342,4 +342,121 @@ test.group("supplier purchase returns", (group) => {
     expect((await failure(getPurchaseReturn(ctx.stranger, one.id))).status).toBe(404);
     expect((await failure(getPurchaseReturn(ctx.clerk, "not-an-id"))).status).toBe(404);
   });
+  test("a recalled batch sent back in full stays recalled, not depleted", async ({ expect }) => {
+    const ctx = await setup();
+
+    await db
+      .update(inventoryBatches)
+      .set({ status: "RECALLED" })
+      .where(eq(inventoryBatches.id, ctx.b.id));
+
+    const { id } = await draft(ctx, "40", {
+      lines: [{ inventoryBatchId: ctx.b.id, quantity: "40" }],
+    });
+
+    await submitPurchaseReturn(ctx.clerk, id, {}, { now: NOW });
+    await approvePurchaseReturn(ctx.manager, id, {}, { now: NOW });
+    await postPurchaseReturn(ctx.manager, id, {}, { now: NOW });
+
+    expect(await batchOf(ctx.b)).toMatchObject({ quantityAvailable: "0.000", status: "RECALLED" });
+  });
+
+  test("an inactive supplier is refused", async ({ expect }) => {
+    const ctx = await setup();
+
+    await db.update(suppliers).set({ isActive: false }).where(eq(suppliers.id, ctx.supplier.id));
+
+    expect((await failure(draft(ctx))).details[0].path).toBe("supplierId");
+  });
+
+  test("a return that could not be posted is stopped at approval, with the shortfall shown", async ({
+    expect,
+  }) => {
+    const ctx = await setup();
+    const { id } = await draft(ctx, "100");
+
+    await submitPurchaseReturn(ctx.clerk, id, {}, { now: NOW });
+    await db
+      .update(inventoryBatches)
+      .set({ quantityAvailable: "60.000" })
+      .where(eq(inventoryBatches.id, ctx.a.id));
+
+    const detail = await getPurchaseReturn(ctx.clerk, id);
+    const refused = await failure(approvePurchaseReturn(ctx.manager, id, {}, { now: NOW }));
+
+    expect(detail.lines[0]).toMatchObject({ availableNow: "60.000", short: true });
+    expect(refused.code).toBe("return_stock");
+    expect(await statusOf(id)).toBe("PENDING_APPROVAL");
+  });
+
+  test("two returns on one batch: the second cannot post once the first has", async ({
+    expect,
+  }) => {
+    const ctx = await setup();
+    const first = await approved(ctx, "300");
+    const second = await approved(ctx, "300");
+
+    await postPurchaseReturn(ctx.manager, first, {}, { now: NOW });
+
+    const refused = await failure(postPurchaseReturn(ctx.manager, second, {}, { now: NOW }));
+
+    expect(refused.code).toBe("return_stock");
+    expect((await batchOf(ctx.a)).quantityAvailable).toBe("200.000");
+  });
+
+  test("on-hand drops by the total of a multi-line return of one product", async ({ expect }) => {
+    const ctx = await setup();
+    const { id } = await draft(ctx, "1", {
+      lines: [
+        { inventoryBatchId: ctx.a.id, quantity: "100" },
+        { inventoryBatchId: ctx.b.id, quantity: "40" },
+      ],
+    });
+
+    await submitPurchaseReturn(ctx.clerk, id, {}, { now: NOW });
+    await approvePurchaseReturn(ctx.manager, id, {}, { now: NOW });
+    await postPurchaseReturn(ctx.manager, id, {}, { now: NOW });
+
+    const [stock] = await db
+      .select()
+      .from(inventories)
+      .where(eq(inventories.id, ctx.a.inventoryId));
+
+    expect(stock.quantityOnHand).toBe("400.000");
+    expect(await batchOf(ctx.b)).toMatchObject({ quantityAvailable: "0.000", status: "DEPLETED" });
+  });
+
+  test("other branches cannot act on a return, and finished returns stay finished", async ({
+    expect,
+  }) => {
+    const ctx = await setup();
+    const northAdmin = await makeAuthUser({
+      branchId: ctx.north.id,
+      permissions: ROLE_PERMISSIONS.admin,
+    });
+    const id = await approved(ctx, "10");
+    const cancelled = await approved(ctx, "10");
+
+    for (const act of [approvePurchaseReturn, postPurchaseReturn]) {
+      expect((await failure(act(northAdmin, id, {}, { now: NOW }))).status).toBe(404);
+    }
+
+    expect(
+      (await failure(cancelPurchaseReturn(northAdmin, id, { reason: "x" }, { now: NOW }))).status,
+    ).toBe(404);
+
+    await cancelPurchaseReturn(ctx.manager, cancelled, { reason: "Changed mind" }, { now: NOW });
+
+    expect(
+      (await failure(postPurchaseReturn(ctx.manager, cancelled, {}, { now: NOW }))).status,
+    ).toBe(409);
+
+    await postPurchaseReturn(ctx.manager, id, {}, { now: NOW });
+
+    expect(
+      (await failure(cancelPurchaseReturn(ctx.manager, id, { reason: "Too late" }, { now: NOW })))
+        .status,
+    ).toBe(409);
+    expect(await statusOf(id)).toBe("POSTED");
+  });
 });
