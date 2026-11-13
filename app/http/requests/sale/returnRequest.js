@@ -18,7 +18,21 @@ export function returnRequest(body) {
   };
 }
 
+// `refunds[i][method|amount|referenceNumber]` rows split a refund over methods; a plain
+// `refundMethod` pays all of it by one.
 export function processRequest(body) {
+  if (body?.refunds !== undefined) {
+    return {
+      refunds: rowsOf(body.refunds).map((row) => {
+        return {
+          method: str(row.method),
+          amount: str(row.amount),
+          referenceNumber: str(row.referenceNumber),
+        };
+      }),
+    };
+  }
+
   return { refundMethod: str(body?.refundMethod), referenceNumber: str(body?.referenceNumber) };
 }
 

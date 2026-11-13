@@ -1,4 +1,5 @@
 import { can, PERMISSIONS } from "../../services/auth/permissions.js";
+import { cmp, sub } from "../../services/support/decimal.js";
 import {
   approveReturn,
   cancelReturn,
@@ -72,6 +73,25 @@ async function returnForm(req, res, { values, lines, errors = {} }) {
     values,
     errors,
     rows: formRows(pieces, lines, errors),
+  });
+}
+
+// One row per method the sale can still be refunded by, with the refund prefilled in that order
+// (each method up to what it has left) so the usual case needs no typing.
+function refundRows(refundable, refundAmount) {
+  let remaining = refundAmount;
+
+  return refundable.map((entry, index) => {
+    const amount = cmp(entry.left, remaining) < 0 ? entry.left : remaining;
+
+    remaining = sub(remaining, amount);
+
+    return {
+      index,
+      method: entry.method,
+      left: entry.left,
+      amount: cmp(amount, "0") > 0 ? amount : "",
+    };
   });
 }
 
@@ -198,7 +218,7 @@ export default {
       salesReturn,
       lines,
       refund,
-      refundable,
+      refundRows: refundRows(refundable, salesReturn.refundAmount),
       dispositionLabels: DISPOSITION_LABELS,
       ...flagsFor(req.user, salesReturn),
     });

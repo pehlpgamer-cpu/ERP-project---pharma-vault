@@ -49,7 +49,9 @@ async function failure(promise) {
 // One sale in MAIN: 10 tablets at 10.00 paid in cash (total 100.00), with the stock already taken
 // off the shelf (99,990 of 100,000 left). A clerk drafts returns; the manager approves and
 // processes, and has their own open register.
-async function setup(overrides = {}) {
+async function setup({ lineSpec = { quantity: "10", unitPrice: "10.00" }, ...overrides } = {}) {
+  const onShelf = `${100000 - Number(lineSpec.quantity)}.000`;
+
   const world = await makeWorld();
   const clerk = await makeAuthUser({
     branchId: world.branch.id,
@@ -79,9 +81,9 @@ async function setup(overrides = {}) {
       {
         productId: world.product.id,
         productUnitId: world.unit.id,
-        quantity: "10",
-        unitPrice: "10.00",
-        batches: [{ batchId: world.batch.id, quantity: "10" }],
+        quantity: lineSpec.quantity,
+        unitPrice: lineSpec.unitPrice,
+        batches: [{ batchId: world.batch.id, quantity: lineSpec.quantity }],
       },
     ],
     payments: [{ method: "CASH", amount: "100.00" }],
@@ -90,9 +92,9 @@ async function setup(overrides = {}) {
 
   await db
     .update(inventoryBatches)
-    .set({ quantityAvailable: "99990.000" })
+    .set({ quantityAvailable: onShelf })
     .where(eq(inventoryBatches.id, world.batch.id));
-  await db.update(inventories).set({ quantityOnHand: "99990.000" });
+  await db.update(inventories).set({ quantityOnHand: onShelf });
 
   const [piece] = await db.select().from(saleItemBatches);
 
@@ -288,6 +290,119 @@ test.group("sales returns", (group) => {
     expect(total).toBeCloseTo(100, 2);
     expect(await saleStatus(ctx)).toBe("REFUNDED");
     expect((await failure(draft(ctx, "1"))).code).toBe("return_sale_state");
+  });
+
+  test("rounded shares still add up to exactly the line total", async ({ expect }) => {
+    // 100 tablets at 0.025 = 2.50; every third of it rounds
+    const ctx = await setup({
+      lineSpec: { quantity: "100", unitPrice: "0.0250" },
+      payments: [{ method: "CASH", amount: "2.50" }],
+    });
+
+    await settle(ctx, "33");
+    await settle(ctx, "33");
+    await settle(ctx, "34");
+
+    const amounts = (await db.select().from(refunds))
+      .map((row) => {
+        return row.amount;
+      })
+      .sort();
+
+    expect(amounts).toEqual(["0.85", "0.83", "0.82"].sort());
+    expect(await saleStatus(ctx)).toBe("REFUNDED");
+  });
+
+  test("a return that rounds to no money is refused at the draft", async ({ expect }) => {
+    // 100 tablets at 0.025: a thousandth of a tablet is worth a fraction of a cent
+    const ctx = await setup({
+      lineSpec: { quantity: "100", unitPrice: "0.0250" },
+      payments: [{ method: "CASH", amount: "2.50" }],
+    });
+    const error = await failure(draft(ctx, "0.001"));
+
+    expect(error.details[0].path).toBe("lines.0.quantity");
+    expect(error.details[0].message).toContain("too small");
+  });
+
+  test("a split-tender sale is refunded in parts, each within its method", async ({ expect }) => {
+    const ctx = await setup({
+      payments: [
+        { method: "CASH", amount: "60.00" },
+        { method: "GCASH", amount: "40.00", reference: "GC-1" },
+      ],
+    });
+    const { id } = await draft(ctx, "10");
+
+    await submitReturn(ctx.clerk, id, {}, { now: NOW });
+    await approveReturn(ctx.manager, id, {}, { now: NOW });
+
+    const short = await failure(
+      processReturn(
+        ctx.manager,
+        id,
+        { refunds: [{ method: "CASH", amount: "60.00" }] },
+        { now: NOW },
+      ),
+    );
+    const over = await failure(
+      processReturn(
+        ctx.manager,
+        id,
+        {
+          refunds: [
+            { method: "CASH", amount: "50.00" },
+            { method: "GCASH", amount: "50.00", referenceNumber: "R-1" },
+          ],
+        },
+        { now: NOW },
+      ),
+    );
+
+    expect(short.details[0].path).toBe("refunds");
+    expect(over.details[0].path).toBe("refunds.1.amount");
+
+    await processReturn(
+      ctx.manager,
+      id,
+      {
+        refunds: [
+          { method: "CASH", amount: "60.00" },
+          { method: "GCASH", amount: "40.00", referenceNumber: "R-1" },
+        ],
+      },
+      { now: NOW },
+    );
+
+    const rows = await db.select().from(refunds);
+    const [cash] = await db.select().from(cashTransactions);
+
+    expect(
+      rows
+        .map((row) => {
+          return `${row.paymentMethod}:${row.amount}`;
+        })
+        .sort(),
+    ).toEqual(["CASH:60.00", "GCASH:40.00"]);
+    expect(cash.amount).toBe("60.00");
+    expect(await saleStatus(ctx)).toBe("REFUNDED");
+  });
+
+  test("a sale that stopped being returnable cannot be refunded", async ({ expect }) => {
+    const ctx = await setup();
+    const { id } = await draft(ctx, "2");
+
+    await submitReturn(ctx.clerk, id, {}, { now: NOW });
+    await approveReturn(ctx.manager, id, {}, { now: NOW });
+    await db.update(sales).set({ status: "VOIDED" }).where(eq(sales.id, ctx.sale.id));
+
+    const error = await failure(
+      processReturn(ctx.manager, id, { refundMethod: "CASH" }, { now: NOW }),
+    );
+
+    expect(error.code).toBe("return_sale_state");
+    expect(await saleStatus(ctx)).toBe("VOIDED");
+    expect(await db.select().from(refunds)).toHaveLength(0);
   });
 
   test("other dispositions record the units but leave the stock alone", async ({ expect }) => {

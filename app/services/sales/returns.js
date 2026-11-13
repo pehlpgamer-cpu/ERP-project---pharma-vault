@@ -147,6 +147,17 @@ const soldMessage = (sale, today) => {
   return null;
 };
 
+// the status rule alone (no window): used again when a return is processed
+function checkSaleStillOpen(sale) {
+  if (!RETURNABLE_SALES.includes(sale.status)) {
+    throw new HttpError(
+      409,
+      "return_sale_state",
+      `A ${sale.status.toLowerCase().replaceAll("_", " ")} sale cannot be refunded`,
+    );
+  }
+}
+
 function checkSaleOpen(sale, today) {
   const problem = soldMessage(sale, today);
 
@@ -263,9 +274,24 @@ function checkDraft(input, { pieces, byPiece, byItem }, today) {
         byItem.get(piece.saleItemId) ?? { quantity: "0", refund: "0" };
       const quantity = toScale(quantityText, 3);
       const left = sub(piece.itemTotal, running.refund);
-      const lastUnits = cmp(add(running.quantity, quantity), piece.itemBaseQuantity) >= 0;
-      const share = toScale(div(mul(piece.itemTotal, quantity), piece.itemBaseQuantity, 6), 2);
-      const refund = toScale(lastUnits || cmp(share, left) > 0 ? left : share, 2);
+      const cumulative = add(running.quantity, quantity);
+      const lastUnits = cmp(cumulative, piece.itemBaseQuantity) >= 0;
+      // the share of the total owed for all units returned so far, less what was already refunded:
+      // rounding never adds up to more or less than the line total
+      const owed = toScale(div(mul(piece.itemTotal, cumulative), piece.itemBaseQuantity, 6), 2);
+      const share = sub(owed, running.refund);
+      const refund = toScale(
+        lastUnits || cmp(share, left) > 0 ? left : cmp(share, "0") < 0 ? "0" : share,
+        2,
+      );
+
+      if (cmp(refund, "0") <= 0) {
+        errors.push({
+          path: `lines.${index}.quantity`,
+          message: "That quantity is too small to refund; return more units together",
+        });
+        continue;
+      }
 
       itemRunning.set(piece.saleItemId, {
         quantity: add(running.quantity, quantity),
@@ -510,25 +536,86 @@ export const cancelReturn = (user, id, input, options) => {
 
 // ---- processing ----
 
+const MONEY = /^\d{1,12}(\.\d{1,2})?$/;
+
+const cleanReference = (value, path) => {
+  const text = typeof value === "string" ? value.trim() : "";
+
+  if (text.length > MAX_REFERENCE) {
+    throw invalid(path, `Keep the reference under ${MAX_REFERENCE} characters`);
+  }
+
+  return text === "" ? null : text;
+};
+
+// The refund as parts: `{ refundMethod, referenceNumber }` pays all of it by one method (amount null
+// means "the whole return"); `{ refunds: [{ method, amount, referenceNumber }] }` splits it.
 function checkRefundInput(input) {
-  const method = input?.refundMethod;
-  const reference = typeof input?.referenceNumber === "string" ? input.referenceNumber.trim() : "";
+  if (!Array.isArray(input?.refunds)) {
+    if (!REFUND_METHODS.includes(input?.refundMethod)) {
+      throw invalid("refundMethod", "Choose how the refund is paid");
+    }
 
-  if (!REFUND_METHODS.includes(method)) {
-    throw invalid("refundMethod", "Choose how the refund is paid");
+    return [
+      {
+        method: input.refundMethod,
+        amount: null,
+        reference: cleanReference(input.referenceNumber, "referenceNumber"),
+        paths: { method: "refundMethod", amount: "refundMethod", reference: "referenceNumber" },
+      },
+    ];
   }
 
-  if (reference.length > MAX_REFERENCE) {
-    throw invalid("referenceNumber", `Keep the reference under ${MAX_REFERENCE} characters`);
+  const splits = [];
+
+  input.refunds.forEach((row, index) => {
+    if (isBlank(row?.amount)) {
+      return;
+    }
+
+    const paths = {
+      method: `refunds.${index}.method`,
+      amount: `refunds.${index}.amount`,
+      reference: `refunds.${index}.referenceNumber`,
+    };
+    const amount = typeof row.amount === "string" ? row.amount.trim() : "";
+
+    if (!REFUND_METHODS.includes(row.method)) {
+      throw invalid(paths.method, "Choose how this part is paid");
+    }
+
+    if (!MONEY.test(amount) || cmp(amount, "0") <= 0) {
+      throw invalid(paths.amount, "Enter an amount above 0, up to 2 decimals");
+    }
+
+    if (
+      splits.some((split) => {
+        return split.method === row.method;
+      })
+    ) {
+      throw invalid(paths.method, "Use each method once");
+    }
+
+    splits.push({
+      method: row.method,
+      amount: toScale(amount, 2),
+      reference: cleanReference(row.referenceNumber, paths.reference),
+      paths,
+    });
+  });
+
+  if (splits.length === 0) {
+    throw invalid("refunds", "Enter how much is refunded by each method");
   }
 
-  return { method, reference: reference === "" ? null : reference };
+  return splits;
 }
 
 /**
- * APPROVED → PROCESSED. Pays the refund by `refundMethod` (a method the sale was paid with, with a
- * reference unless cash), puts RESTOCK lines back on their batch, and moves the sale's status. Cash
- * comes out of the processor's own open register. A deadlock with a sale is retried.
+ * APPROVED → PROCESSED. Pays the refund by a method the sale was paid with (or several, each within
+ * what it paid, adding up to the return's refund; a reference unless cash), puts RESTOCK lines back
+ * on their batch, and moves the sale's status. Cash comes out of the processor's own open register. A
+ * deadlock with a sale is retried.
  */
 export async function processReturn(user, id, input, options = {}) {
   const refund = checkRefundInput(input);
@@ -576,35 +663,61 @@ async function refundableByMethod(tx, sale) {
   return left;
 }
 
-async function processOnce(user, id, { method, reference }, { now = new Date(), meta = {} }) {
+async function processOnce(user, id, parts, { now = new Date(), meta = {} }) {
   return await db.transaction(
     async (tx) => {
       const header = await lockReturn(tx, user, id, ["APPROVED"], "processed");
       const [sale] = await tx.select().from(sales).where(eq(sales.id, header.saleId)).for("update");
+
+      // a sale voided since the return was approved is not refunded
+      checkSaleStillOpen(sale);
+
       const left = await refundableByMethod(tx, sale);
       const today = businessDate(now);
+      const total = toScale(header.refundAmount, 2);
+      const splits = parts.map((part) => {
+        return { ...part, amount: part.amount ?? total };
+      });
 
-      if (!left.has(method)) {
-        throw invalid(
-          "refundMethod",
-          `This sale was not paid by ${method}, so it cannot be refunded that way`,
-        );
+      if (
+        cmp(
+          sum(
+            splits.map((split) => {
+              return split.amount;
+            }),
+          ),
+          total,
+        ) !== 0
+      ) {
+        throw invalid("refunds", `The amounts must add up to the refund of ${total}`);
       }
 
-      if (method !== "CASH" && reference === null) {
-        throw invalid("referenceNumber", "Enter the reference of the refund");
+      for (const { method, amount, reference, paths } of splits) {
+        if (!left.has(method)) {
+          throw invalid(
+            paths.method,
+            `This sale was not paid by ${method}, so it cannot be refunded that way`,
+          );
+        }
+
+        if (method !== "CASH" && reference === null) {
+          throw invalid(paths.reference, "Enter the reference of the refund");
+        }
+
+        if (cmp(amount, left.get(method)) > 0) {
+          throw invalid(
+            paths.amount,
+            `Only ${toScale(left.get(method), 2)} is left to refund by ${method}`,
+          );
+        }
       }
 
-      if (cmp(header.refundAmount, left.get(method)) > 0) {
-        throw invalid(
-          "refundMethod",
-          `Only ${toScale(left.get(method), 2)} is left to refund by ${method}`,
-        );
-      }
-
+      const cashPart = splits.find((split) => {
+        return split.method === "CASH";
+      });
       let session = null;
 
-      if (method === "CASH") {
+      if (cashPart) {
         [session] = await tx
           .select()
           .from(cashRegisterSessions)
@@ -636,22 +749,26 @@ async function processOnce(user, id, { method, reference }, { now = new Date(), 
       });
       const restocked = await restockLines(tx, user, header, restocks, { now, today });
 
-      await tx.insert(refunds).values({
-        id: randomUUID(),
-        salesReturnId: id,
-        paymentMethod: method,
-        amount: toScale(header.refundAmount, 2),
-        referenceNumber: reference,
-        status: "PROCESSED",
-        processedAt: now,
-      });
+      await tx.insert(refunds).values(
+        splits.map(({ method, amount, reference }) => {
+          return {
+            id: randomUUID(),
+            salesReturnId: id,
+            paymentMethod: method,
+            amount,
+            referenceNumber: reference,
+            status: "PROCESSED",
+            processedAt: now,
+          };
+        }),
+      );
 
       if (session) {
         await tx.insert(cashTransactions).values({
           id: randomUUID(),
           cashRegisterSessionId: session.id,
           transactionType: "CASH_REFUND",
-          amount: toScale(header.refundAmount, 2),
+          amount: cashPart.amount,
           referenceType: "sales_return",
           referenceId: id,
           reason: header.returnReason,
@@ -686,8 +803,10 @@ async function processOnce(user, id, { method, reference }, { now = new Date(), 
         oldValues: { status: "APPROVED" },
         newValues: {
           status: "PROCESSED",
-          refund: toScale(header.refundAmount, 2),
-          method,
+          refund: total,
+          methods: splits.map(({ method, amount }) => {
+            return `${method}:${amount}`;
+          }),
           saleStatus,
           restocked,
         },

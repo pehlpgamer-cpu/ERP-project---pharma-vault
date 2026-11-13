@@ -1,6 +1,6 @@
 {{!--
   returns/show: one return with its lines and next steps. Required: salesReturn, lines, refund (or null),
-  refundable, dispositionLabels, canSubmit, canApprove, needsOtherApprover, canReject, canProcess, canCancel.
+  refundRows, dispositionLabels, canSubmit, canApprove, needsOtherApprover, canReject, canProcess, canCancel.
 --}}
 <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
   {{> components/page-header title=salesReturn.returnNumber icon="arrow-return-left"}}
@@ -67,16 +67,19 @@
   {{#if canProcess}}
   <form method="POST" action="/returns/{{salesReturn.id}}/process" class="flex flex-col gap-2 border border-gray-200 bg-white p-3 text-sm" data-confirm="Process this return? Stock is restocked and the refund is paid out.">
     <h2 class="font-semibold">Pay the refund</h2>
-    <label class="text-gray-700">Refund by
-      <select name="refundMethod" class="field">
-        {{#each refundable}}
-        <option value="{{method}}">{{paymentMethod method}} (up to {{currency left}})</option>
-        {{/each}}
-      </select>
-    </label>
-    <label class="text-gray-700">Reference (card, e-wallet or bank refunds)
-      <input type="text" name="referenceNumber" maxlength="150" class="field">
-    </label>
+    <p class="text-gray-600">Refund of {{currency salesReturn.refundAmount}}, paid back the way the sale was paid. Fill in the amount for each method; they must add up. Card, e-wallet and bank refunds need a reference.</p>
+    {{#each refundRows}}
+    <div class="grid gap-2 sm:grid-cols-3">
+      <input type="hidden" name="refunds[{{index}}][method]" value="{{method}}">
+      <span class="self-end">{{paymentMethod method}} <span class="text-gray-500">(up to {{currency left}})</span></span>
+      <label class="text-gray-700">Amount
+        <input type="text" inputmode="decimal" name="refunds[{{index}}][amount]" value="{{amount}}" class="field">
+      </label>
+      <label class="text-gray-700">Reference
+        <input type="text" name="refunds[{{index}}][referenceNumber]" maxlength="150" class="field">
+      </label>
+    </div>
+    {{/each}}
     <button type="submit" class="btn">Process return</button>
   </form>
   {{/if}}

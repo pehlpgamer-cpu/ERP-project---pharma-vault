@@ -177,8 +177,12 @@ test.group("return pages", (group) => {
     expect(pending.text).toContain("Approve");
     expect(ready.text).toContain("Process return");
     expect(ready.text).toContain("up to");
+    expect(ready.text).toContain('name="refunds[0][amount]" value="40.00"');
 
-    await ctx.admin.post(`/returns/${id}/process`, { ...HTML, form: { refundMethod: "CASH" } });
+    await ctx.admin.post(`/returns/${id}/process`, {
+      ...HTML,
+      form: { "refunds[0][method]": "CASH", "refunds[0][amount]": "40.00" },
+    });
 
     const [header] = await db.select().from(salesReturns).where(eq(salesReturns.id, id));
     const [sale] = await db.select().from(sales).where(eq(sales.id, ctx.sale.id));
