@@ -9,6 +9,7 @@ import authController from "../app/http/controllers/authController.js";
 import cashRegisterController from "../app/http/controllers/cashRegisterController.js";
 import dashboardController from "../app/http/controllers/dashboardController.js";
 import inventoryController from "../app/http/controllers/inventoryController.js";
+import prescriptionController from "../app/http/controllers/prescriptionController.js";
 import posController from "../app/http/controllers/posController.js";
 import purchaseOrderController from "../app/http/controllers/purchaseOrderController.js";
 import productController from "../app/http/controllers/productController.js";
@@ -158,6 +159,36 @@ for (const [path, guard, handler] of [
 ]) {
   router.post(`/stock-counts/:id/${path}`, requireAuth, guard, asyncHandler(handler));
 }
+
+const canRecordRx = requirePermission(PERMISSIONS.PRESCRIPTIONS_MANAGE);
+const canVerifyRx = requirePermission(PERMISSIONS.PRESCRIPTIONS_VERIFY);
+const canSeeRx = requirePermission(
+  PERMISSIONS.PRESCRIPTIONS_MANAGE,
+  PERMISSIONS.PRESCRIPTIONS_VERIFY,
+);
+
+// /prescriptions/new is registered before /prescriptions/:id so "new" is never read as an id.
+router.get("/prescriptions", requireAuth, canSeeRx, asyncHandler(prescriptionController.index));
+router.get("/prescriptions/new", requireAuth, canRecordRx, prescriptionController.newForm);
+router.post(
+  "/prescriptions",
+  requireAuth,
+  canRecordRx,
+  asyncHandler(prescriptionController.create),
+);
+router.get("/prescriptions/:id", requireAuth, canSeeRx, asyncHandler(prescriptionController.show));
+router.post(
+  "/prescriptions/:id/verify",
+  requireAuth,
+  canVerifyRx,
+  asyncHandler(prescriptionController.verify),
+);
+router.post(
+  "/prescriptions/:id/reject",
+  requireAuth,
+  canVerifyRx,
+  asyncHandler(prescriptionController.reject),
+);
 
 const canManageTransfers = requirePermission(PERMISSIONS.TRANSFERS_MANAGE);
 const canApproveTransfers = requirePermission(PERMISSIONS.TRANSFERS_APPROVE);

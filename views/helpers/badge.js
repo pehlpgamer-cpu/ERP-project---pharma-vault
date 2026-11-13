@@ -30,6 +30,10 @@ const STATUS_COLORS = {
   PROCESSED: "green",
   RECEIVED: "green",
   IN_TRANSIT: "blue",
+  PENDING_VERIFICATION: "amber",
+  VERIFIED: "blue",
+  FULLY_DISPENSED: "green",
+  EXPIRED: "gray",
   CANCELLED: "red",
   REJECTED: "red",
 };

@@ -1,0 +1,65 @@
+{{!--
+  prescriptions/show: one prescription with items and linked sales. Required: prescription, items, sales, canReview.
+--}}
+<div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+  {{> components/page-header title=prescription.prescriptionNumber icon="file-medical"}}
+  <a href="/prescriptions" class="btn bg-gray-200"><i class="bi bi-list-ul" aria-hidden="true"></i> All prescriptions</a>
+</div>
+
+<section class="mb-4 grid gap-3 border border-gray-200 bg-white p-4 text-sm sm:grid-cols-2 lg:grid-cols-4" aria-label="Prescription details">
+  <div><span class="block text-gray-500">Status</span>{{badge prescription.status}}</div>
+  <div><span class="block text-gray-500">Prescriber</span>{{prescription.physicianName}}</div>
+  <div><span class="block text-gray-500">License</span>{{prescription.licenseNumber}}</div>
+  <div><span class="block text-gray-500">Customer</span>{{#if prescription.customerName}}{{prescription.customerName}} ({{prescription.customerNumber}}){{else}}-{{/if}}</div>
+  <div><span class="block text-gray-500">Written on</span>{{prescription.prescriptionDate}}</div>
+  <div><span class="block text-gray-500">Valid until</span>{{#if prescription.validUntil}}{{prescription.validUntil}}{{else}}-{{/if}}</div>
+  <div><span class="block text-gray-500">Verified by</span>{{#if prescription.verifiedByName}}{{prescription.verifiedByName}}{{else}}-{{/if}}</div>
+  <div><span class="block text-gray-500">Verified</span>{{#if prescription.verifiedAt}}{{formatDateTime prescription.verifiedAt}}{{else}}-{{/if}}</div>
+</section>
+
+<div class="mb-4 overflow-x-auto border border-gray-200 bg-white">
+  <table class="w-full text-left text-sm">
+    <thead class="bg-gray-50 text-gray-600">
+      <tr>
+        <th class="cell">Product</th>
+        <th class="cell">Instructions</th>
+        <th class="cell text-right">Prescribed</th>
+        <th class="cell text-right">Dispensed</th>
+        <th class="cell text-right">Left</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each items}}
+      <tr class="border-t border-gray-200 align-top">
+        <td class="cell">{{productName}} <span class="text-gray-500">{{sku}}</span></td>
+        <td class="cell">{{dosageInstructions}}{{#if frequency}}<span class="block text-xs text-gray-500">{{frequency}}{{#if duration}} &middot; {{duration}}{{/if}}</span>{{/if}}</td>
+        <td class="cell text-right">{{formatNumber prescribedQuantity}}</td>
+        <td class="cell text-right">{{formatNumber dispensedQuantity}}</td>
+        <td class="cell text-right">{{formatNumber remainingQuantity}}</td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+</div>
+
+{{#if sales.length}}
+<h2 class="mb-2 text-sm font-semibold text-gray-700">Dispensed on</h2>
+<ul class="mb-4 list-inside list-disc text-sm">
+  {{#each sales}}
+  <li><a href="/sales/{{id}}" class="text-blue-700 underline">{{invoiceNumber}}</a> &middot; {{formatDateTime transactionDate}} &middot; {{currency totalAmount}}</li>
+  {{/each}}
+</ul>
+{{/if}}
+
+{{#if canReview}}
+<div class="flex flex-wrap items-start gap-3">
+  <form method="POST" action="/prescriptions/{{prescription.id}}/verify" data-confirm="Verify this prescription? It can then be dispensed at the counter."><button type="submit" class="btn">Verify</button></form>
+  <details>
+    <summary class="btn cursor-pointer bg-gray-200">Reject</summary>
+    <form method="POST" action="/prescriptions/{{prescription.id}}/reject" class="mt-1 flex flex-col gap-1">
+      <input type="text" name="reason" required maxlength="500" placeholder="Why it is rejected" aria-label="Reason" class="field">
+      <button type="submit" class="btn">Reject prescription</button>
+    </form>
+  </details>
+</div>
+{{/if}}

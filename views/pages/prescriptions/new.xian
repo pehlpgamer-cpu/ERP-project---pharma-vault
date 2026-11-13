@@ -1,0 +1,92 @@
+{{!--
+  prescriptions/new: record a prescription. Required: values (physicianName, licenseNumber, specialization,
+  contactNumber, customerNumber, prescriptionDate, validUntil), errors (by field), itemRows.
+--}}
+{{> components/page-header title="Record a prescription" icon="file-medical"}}
+
+{{#if errors.items}}
+<div class="mb-4 border border-red-300 bg-red-50 p-3 text-sm text-red-800" role="alert">{{errors.items}}</div>
+{{/if}}
+
+<form method="POST" action="/prescriptions" class="grid gap-4" novalidate>
+  <section class="grid gap-3 border border-gray-200 bg-white p-4 sm:grid-cols-2" aria-labelledby="doctor-title">
+    <h2 id="doctor-title" class="text-base font-semibold sm:col-span-2">Prescriber</h2>
+    <label class="text-sm text-gray-700">Full name
+      <input type="text" name="physicianName" value="{{values.physicianName}}" maxlength="255" required class="field">
+      {{#if errors.physicianName}}<span class="mt-1 block text-xs text-red-700">{{errors.physicianName}}</span>{{/if}}
+    </label>
+    <label class="text-sm text-gray-700">License number
+      <input type="text" name="licenseNumber" value="{{values.licenseNumber}}" maxlength="100" required class="field">
+      {{#if errors.licenseNumber}}<span class="mt-1 block text-xs text-red-700">{{errors.licenseNumber}}</span>{{/if}}
+    </label>
+    <label class="text-sm text-gray-700">Specialization (optional)
+      <input type="text" name="specialization" value="{{values.specialization}}" maxlength="150" class="field">
+      {{#if errors.specialization}}<span class="mt-1 block text-xs text-red-700">{{errors.specialization}}</span>{{/if}}
+    </label>
+    <label class="text-sm text-gray-700">Contact number (optional)
+      <input type="text" name="contactNumber" value="{{values.contactNumber}}" maxlength="50" class="field">
+    </label>
+  </section>
+
+  <section class="grid gap-3 border border-gray-200 bg-white p-4 sm:grid-cols-3" aria-labelledby="rx-title">
+    <h2 id="rx-title" class="text-base font-semibold sm:col-span-3">Prescription</h2>
+    <label class="text-sm text-gray-700">Written on
+      <input type="date" name="prescriptionDate" value="{{values.prescriptionDate}}" required class="field">
+      {{#if errors.prescriptionDate}}<span class="mt-1 block text-xs text-red-700">{{errors.prescriptionDate}}</span>{{/if}}
+    </label>
+    <label class="text-sm text-gray-700">Valid until (optional)
+      <input type="date" name="validUntil" value="{{values.validUntil}}" class="field">
+      {{#if errors.validUntil}}<span class="mt-1 block text-xs text-red-700">{{errors.validUntil}}</span>{{/if}}
+    </label>
+    <label class="text-sm text-gray-700">Customer number (optional)
+      <input type="text" name="customerNumber" value="{{values.customerNumber}}" maxlength="50" class="field">
+      {{#if errors.customerNumber}}<span class="mt-1 block text-xs text-red-700">{{errors.customerNumber}}</span>{{/if}}
+    </label>
+  </section>
+
+  <section class="border border-gray-200 bg-white p-4" aria-labelledby="items-title">
+    <h2 id="items-title" class="mb-1 text-base font-semibold">Prescribed products</h2>
+    <p class="mb-3 text-sm text-gray-600">Identify each product by its SKU. The quantity is in base units (for example capsules). A pharmacist verifies the prescription before anything is dispensed.</p>
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-sm">
+        <thead class="text-gray-600">
+          <tr>
+            <th class="cell">SKU</th>
+            <th class="cell">Quantity</th>
+            <th class="cell">Dosage instructions</th>
+            <th class="cell">Frequency</th>
+            <th class="cell">Duration</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each itemRows}}
+          <tr class="align-top">
+            <td class="cell">
+              <input type="text" name="items[{{index}}][sku]" value="{{sku}}" aria-label="SKU" class="field">
+              {{#if errors.sku}}<span class="mt-1 block text-xs text-red-700">{{errors.sku}}</span>{{/if}}
+            </td>
+            <td class="cell">
+              <input type="text" inputmode="decimal" name="items[{{index}}][prescribedQuantity]" value="{{prescribedQuantity}}" aria-label="Quantity" class="field">
+              {{#if errors.prescribedQuantity}}<span class="mt-1 block text-xs text-red-700">{{errors.prescribedQuantity}}</span>{{/if}}
+            </td>
+            <td class="cell">
+              <input type="text" name="items[{{index}}][dosageInstructions]" value="{{dosageInstructions}}" aria-label="Dosage instructions" class="field">
+              {{#if errors.dosageInstructions}}<span class="mt-1 block text-xs text-red-700">{{errors.dosageInstructions}}</span>{{/if}}
+            </td>
+            <td class="cell">
+              <input type="text" name="items[{{index}}][frequency]" value="{{frequency}}" aria-label="Frequency" class="field">
+              {{#if errors.frequency}}<span class="mt-1 block text-xs text-red-700">{{errors.frequency}}</span>{{/if}}
+            </td>
+            <td class="cell"><input type="text" name="items[{{index}}][duration]" value="{{duration}}" aria-label="Duration" class="field"></td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="flex gap-2">
+    <button type="submit" class="btn"><i class="bi bi-check-lg" aria-hidden="true"></i> Save prescription</button>
+    <a href="/prescriptions" class="btn bg-gray-200">Cancel</a>
+  </div>
+</form>

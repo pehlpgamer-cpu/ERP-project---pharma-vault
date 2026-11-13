@@ -52,6 +52,7 @@ let searchTicket = 0;
 let searchTimer = null;
 let attempt = null; // { key, body, pending }: one Idempotency-Key per distinct sale attempt
 let busy = false;
+let prescription = null; // { id, prescriptionNumber, customerName, items: [{ productId, productName, remaining }] }
 
 function el(tag, { text, className, attrs = {}, on = {}, children = [] } = {}) {
   const node = document.createElement(tag);
@@ -182,13 +183,32 @@ function refreshLock() {
 
 // ---- search ----
 
+// A product that needs a prescription can be sold when the loaded prescription lists it.
+const needsPrescription = (product) => {
+  return product.requiresPrescription || product.classification !== "OTC";
+};
+
+const onPrescription = (product) => {
+  return (
+    prescription !== null &&
+    prescription.items.some((item) => {
+      return item.productId === product.id;
+    })
+  );
+};
+
 function addState(product, unit) {
   if (locked()) {
     return { ok: false, reason: "Finish the last sale first" };
   }
 
-  if (product.requiresPrescription || product.classification !== "OTC") {
-    return { ok: false, reason: "Needs a prescription: it cannot be sold at this counter" };
+  if (needsPrescription(product) && !onPrescription(product)) {
+    return {
+      ok: false,
+      reason: prescription
+        ? "Not on the loaded prescription"
+        : "Needs a prescription: load one above to sell it",
+    };
   }
 
   if (unit.price === null) {
@@ -221,7 +241,7 @@ function addUnit(product, unit) {
 }
 
 function resultItem(product) {
-  const blocked = product.requiresPrescription || product.classification !== "OTC";
+  const blocked = needsPrescription(product) && !onPrescription(product);
   const details = [product.genericName, product.strength, product.dosageForm, product.sku]
     .filter(Boolean)
     .join(" · ");
@@ -278,7 +298,9 @@ function resultItem(product) {
       blocked
         ? el("p", {
             className: "mt-2 text-xs text-amber-800",
-            text: "Needs a prescription: it cannot be sold at this counter.",
+            text: prescription
+              ? "Not on the loaded prescription."
+              : "Needs a prescription: load a verified one above to sell it.",
           })
         : el("span"),
     ],
@@ -666,6 +688,18 @@ function failureMessage(error, status) {
   return error?.message ?? `The sale could not be saved (error ${status}).`;
 }
 
+// the loaded prescription is attached only when something in the cart is on it
+function usesPrescription() {
+  return (
+    prescription !== null &&
+    cart.lines.some((line) => {
+      return prescription.items.some((item) => {
+        return item.productId === line.productId;
+      });
+    })
+  );
+}
+
 async function completeSale() {
   const summary = tenderSummary(cartTotals(cart).total, activePayments());
 
@@ -685,6 +719,7 @@ async function completeSale() {
       };
     }),
     customerId: null,
+    prescriptionId: usesPrescription() ? prescription.id : null,
   };
 
   // The same sale keeps its key, and a sale that got no answer is sent again exactly as it was.
@@ -740,6 +775,71 @@ async function completeSale() {
 }
 
 // ---- wiring ----
+
+// ---- prescription box ----
+
+function showPrescription(message) {
+  byId("pos-rx-info").textContent = message;
+  byId("pos-rx-clear").hidden = prescription === null;
+}
+
+async function loadPrescription() {
+  const number = byId("pos-rx-number").value.trim();
+
+  if (number === "") {
+    return;
+  }
+
+  let payload = null;
+
+  try {
+    const response = await fetch(`${config.prescriptionUrl}?number=${encodeURIComponent(number)}`, {
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    });
+
+    payload = await response.json().catch(() => {
+      return null;
+    });
+  } catch {
+    // no answer: say so below
+  }
+
+  if (payload?.data) {
+    prescription = payload.data;
+
+    const left = prescription.items
+      .map((item) => {
+        return `${item.productName} (${counts.format(Number(item.remaining))} left)`;
+      })
+      .join(", ");
+
+    showPrescription(
+      `${prescription.prescriptionNumber} for ${prescription.customerName}: ${left}`,
+    );
+  } else {
+    prescription = null;
+    showPrescription(payload?.error?.message ?? "The prescription could not be loaded.");
+  }
+
+  renderResults();
+}
+
+function clearPrescription() {
+  prescription = null;
+  byId("pos-rx-number").value = "";
+  showPrescription("");
+  renderResults();
+}
+
+byId("pos-rx-load").addEventListener("click", loadPrescription);
+byId("pos-rx-clear").addEventListener("click", clearPrescription);
+byId("pos-rx-number").addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    loadPrescription();
+  }
+});
 
 const search = byId("pos-search");
 

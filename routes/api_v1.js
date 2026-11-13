@@ -4,6 +4,7 @@ import { RouteBuilder } from "../src/RouteBuilder.js";
 const routeBuilder = new RouteBuilder(router);
 
 import healthController from "../app/http/controllers/api/v1/healthController.js";
+import prescriptionsApiController from "../app/http/controllers/api/v1/prescriptionsController.js";
 import productsApiController from "../app/http/controllers/api/v1/productsController.js";
 import salesApiController from "../app/http/controllers/api/v1/salesController.js";
 import asyncHandler from "../app/http/middleware/asyncHandler.js";
@@ -25,6 +26,8 @@ routeBuilder.apiResource("/sales", salesApiController, {
 });
 // Selling needs sales.create only: whoever rings up a sale gets its detail back.
 router.post("/sales", canSell, asyncHandler(salesApiController.store));
+
+router.get("/prescriptions/lookup", canSell, asyncHandler(prescriptionsApiController.lookup));
 
 routeBuilder.apiResource("/products", productsApiController, {
   include: ["index"],

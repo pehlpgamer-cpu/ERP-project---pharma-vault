@@ -5,6 +5,7 @@ const CONFIG = Object.freeze({
   currency: "PHP",
   productsUrl: "/api/v1/products",
   salesUrl: "/api/v1/sales",
+  prescriptionUrl: "/api/v1/prescriptions/lookup",
 });
 
 export default {

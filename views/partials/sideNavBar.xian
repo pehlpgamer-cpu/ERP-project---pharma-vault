@@ -8,6 +8,11 @@
     <i class="bi bi-receipt" aria-hidden="true"></i> Sales
   </a>
   {{/if}}
+  {{#if (can "prescriptions.manage" "prescriptions.verify")}}
+  <a href="/prescriptions" class="nav-link {{#if (isActive currentPath "/prescriptions")}}nav-link-active{{/if}}">
+    <i class="bi bi-file-medical" aria-hidden="true"></i> Prescriptions
+  </a>
+  {{/if}}
   {{#if (can "returns.create" "returns.approve")}}
   <a href="/returns" class="nav-link {{#if (isActive currentPath "/returns")}}nav-link-active{{/if}}">
     <i class="bi bi-arrow-return-left" aria-hidden="true"></i> Returns
