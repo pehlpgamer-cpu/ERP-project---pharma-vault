@@ -6,6 +6,8 @@ const routeBuilder = new RouteBuilder(router);
 import { homePage } from "../app/http/controllers/homeController.js";
 import userController from "../app/http/controllers/userController.js";
 import authController from "../app/http/controllers/authController.js";
+import auditController from "../app/http/controllers/auditController.js";
+import reportController from "../app/http/controllers/reportController.js";
 import cashRegisterController from "../app/http/controllers/cashRegisterController.js";
 import dashboardController from "../app/http/controllers/dashboardController.js";
 import inventoryController from "../app/http/controllers/inventoryController.js";
@@ -65,6 +67,19 @@ for (const [path, guard, handler] of [
 ]) {
   router.post(`/returns/:id/${path}`, requireAuth, guard, asyncHandler(handler));
 }
+
+router.get(
+  "/audit",
+  requireAuth,
+  requirePermission(PERMISSIONS.AUDIT_VIEW),
+  asyncHandler(auditController.index),
+);
+router.get(
+  "/reports/movements",
+  requireAuth,
+  requirePermission(PERMISSIONS.INVENTORY_VIEW),
+  asyncHandler(reportController.movements),
+);
 
 const canManageProducts = requirePermission(PERMISSIONS.PRODUCTS_MANAGE);
 

@@ -1,0 +1,72 @@
+{{!-- audit/index: the audit trail. Required: events, total, filters, typeOptions, pagination. --}}
+{{> components/page-header title="Audit trail" icon="shield-check"}}
+
+<form method="GET" action="/audit" class="mb-4 flex flex-wrap items-end gap-3 border border-gray-200 bg-white p-3">
+  <label class="text-sm text-gray-700">From
+    <input type="date" name="from" value="{{filters.from}}" class="field">
+  </label>
+  <label class="text-sm text-gray-700">To
+    <input type="date" name="to" value="{{filters.to}}" class="field">
+  </label>
+  <label class="text-sm text-gray-700">Action starts with
+    <input type="text" name="action" value="{{filters.action}}" class="field" placeholder="RETURN_">
+  </label>
+  <label class="text-sm text-gray-700">Entity
+    <select name="entityType" class="field">
+      {{#each typeOptions}}
+      <option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+      {{/each}}
+    </select>
+  </label>
+  <label class="text-sm text-gray-700">Entity id
+    <input type="text" name="entityId" value="{{filters.entityId}}" class="field" placeholder="document UUID">
+  </label>
+  <label class="text-sm text-gray-700">User
+    <input type="search" name="q" value="{{filters.q}}" class="field" placeholder="name or email">
+  </label>
+  <button type="submit" class="btn"><i class="bi bi-funnel" aria-hidden="true"></i> Filter</button>
+  <a href="/audit" class="btn bg-gray-200">Reset</a>
+</form>
+
+<p class="mb-2 text-sm text-gray-600">{{total}} events</p>
+
+{{#if events.length}}
+<div class="overflow-x-auto border border-gray-200 bg-white">
+  <table class="w-full text-left text-sm">
+    <thead class="bg-gray-50 text-gray-600">
+      <tr>
+        <th class="cell">When</th>
+        <th class="cell">User</th>
+        <th class="cell">Branch</th>
+        <th class="cell">Action</th>
+        <th class="cell">Entity</th>
+        <th class="cell">Reason</th>
+        <th class="cell">Values</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each events}}
+      <tr class="border-t border-gray-200 align-top">
+        <td class="cell whitespace-nowrap">{{formatDateTime createdAt}}</td>
+        <td class="cell">{{#if userName}}{{userName}}{{else}}-{{/if}}</td>
+        <td class="cell">{{#if branchName}}{{branchName}}{{else}}-{{/if}}</td>
+        <td class="cell whitespace-nowrap font-medium">{{action}}</td>
+        <td class="cell">
+          {{entityType}}
+          {{#if link}}<a href="{{link}}" class="block text-xs text-blue-700 underline">open</a>{{/if}}
+          {{#if entityId}}<span class="block break-all text-xs text-gray-500">{{entityId}}</span>{{/if}}
+        </td>
+        <td class="cell">{{#if reason}}{{reason}}{{else}}-{{/if}}</td>
+        <td class="cell">
+          {{#if oldJson}}<details><summary class="cursor-pointer text-xs text-blue-700 underline">Before</summary><pre class="mt-1 max-w-xs overflow-x-auto bg-gray-50 p-2 text-xs">{{oldJson}}</pre></details>{{/if}}
+          {{#if newJson}}<details><summary class="cursor-pointer text-xs text-blue-700 underline">After</summary><pre class="mt-1 max-w-xs overflow-x-auto bg-gray-50 p-2 text-xs">{{newJson}}</pre></details>{{/if}}
+        </td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+</div>
+{{> components/pagination pagination=pagination}}
+{{else}}
+{{> components/empty-state icon="shield-check" title="No events" hint="Nothing matches these filters."}}
+{{/if}}

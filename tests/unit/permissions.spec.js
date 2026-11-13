@@ -2,8 +2,9 @@ import { test } from "@japa/runner";
 import { can, PERMISSIONS, ROLE_PERMISSIONS } from "../../app/services/auth/permissions.js";
 
 test.group("permissions", () => {
-  test("PERMISSIONS holds exactly the twenty-two names", ({ expect }) => {
+  test("PERMISSIONS holds exactly the twenty-three names", ({ expect }) => {
     expect(Object.values(PERMISSIONS).sort()).toEqual([
+      "audit.view",
       "dashboard.view",
       "inventory.adjust",
       "inventory.approve",
@@ -35,6 +36,13 @@ test.group("permissions", () => {
     expect(ROLE_PERMISSIONS.pharmacist).not.toContain("transfers.approve");
     expect(ROLE_PERMISSIONS.cashier).not.toContain("transfers.manage");
     expect(ROLE_PERMISSIONS.accountant).not.toContain("transfers.manage");
+  });
+
+  test("only admin may read the audit trail", ({ expect }) => {
+    expect(ROLE_PERMISSIONS.admin).toContain("audit.view");
+    for (const role of ["pharmacist", "cashier", "accountant"]) {
+      expect(ROLE_PERMISSIONS[role]).not.toContain("audit.view");
+    }
   });
 
   test("can is any-of and false for a null user", ({ expect }) => {

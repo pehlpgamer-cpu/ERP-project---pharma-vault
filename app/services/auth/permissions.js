@@ -21,6 +21,7 @@ export const PERMISSIONS = Object.freeze({
   TRANSFERS_APPROVE: "transfers.approve",
   PRESCRIPTIONS_MANAGE: "prescriptions.manage",
   PRESCRIPTIONS_VERIFY: "prescriptions.verify",
+  AUDIT_VIEW: "audit.view",
 });
 
 /** Which permissions each seeded role holds (the seed and the tests share this table). */

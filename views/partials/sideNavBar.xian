@@ -41,6 +41,16 @@
     <i class="bi bi-truck" aria-hidden="true"></i> Transfers
   </a>
   {{/if}}
+  {{#if (can "inventory.view")}}
+  <a href="/reports/movements" class="nav-link {{#if (isActive currentPath "/reports/movements")}}nav-link-active{{/if}}">
+    <i class="bi bi-clock-history" aria-hidden="true"></i> Movements
+  </a>
+  {{/if}}
+  {{#if (can "audit.view")}}
+  <a href="/audit" class="nav-link {{#if (isActive currentPath "/audit")}}nav-link-active{{/if}}">
+    <i class="bi bi-shield-check" aria-hidden="true"></i> Audit trail
+  </a>
+  {{/if}}
   {{#if (can "purchasing.view")}}
   <a href="/purchase-orders" class="nav-link {{#if (isActive currentPath "/purchase-orders")}}nav-link-active{{/if}}">
     <i class="bi bi-cart-check" aria-hidden="true"></i> Purchasing

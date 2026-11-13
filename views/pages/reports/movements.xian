@@ -1,0 +1,73 @@
+{{!-- reports/movements: the stock movement ledger. Required: movements, total, filters, allBranches, typeOptions, pagination. --}}
+{{> components/page-header title="Stock movements" icon="clock-history"}}
+
+<form method="GET" action="/reports/movements" class="mb-4 flex flex-wrap items-end gap-3 border border-gray-200 bg-white p-3">
+  <label class="text-sm text-gray-700">From
+    <input type="date" name="from" value="{{filters.from}}" class="field">
+  </label>
+  <label class="text-sm text-gray-700">To
+    <input type="date" name="to" value="{{filters.to}}" class="field">
+  </label>
+  <label class="text-sm text-gray-700">Type
+    <select name="type" class="field">
+      {{#each typeOptions}}
+      <option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+      {{/each}}
+    </select>
+  </label>
+  <label class="text-sm text-gray-700">Product or batch
+    <input type="search" name="q" value="{{filters.q}}" class="field" placeholder="SKU, name or lot">
+  </label>
+  {{#if allBranches}}
+  <label class="text-sm text-gray-700">Branch id
+    <input type="text" name="branchId" value="{{filters.branchId}}" class="field" placeholder="optional">
+  </label>
+  {{/if}}
+  <button type="submit" class="btn"><i class="bi bi-funnel" aria-hidden="true"></i> Filter</button>
+  <a href="/reports/movements" class="btn bg-gray-200">Reset</a>
+</form>
+
+<p class="mb-2 text-sm text-gray-600">{{total}} movements</p>
+
+{{#if movements.length}}
+<div class="overflow-x-auto border border-gray-200 bg-white">
+  <table class="w-full text-left text-sm">
+    <thead class="bg-gray-50 text-gray-600">
+      <tr>
+        <th class="cell">When</th>
+        <th class="cell">Branch</th>
+        <th class="cell">Product</th>
+        <th class="cell">Lot</th>
+        <th class="cell">Type</th>
+        <th class="cell text-right">Change</th>
+        <th class="cell text-right">Before</th>
+        <th class="cell text-right">After</th>
+        <th class="cell">By</th>
+        <th class="cell">Source</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each movements}}
+      <tr class="border-t border-gray-200 align-top">
+        <td class="cell whitespace-nowrap">{{formatDateTime createdAt}}</td>
+        <td class="cell">{{branchName}}</td>
+        <td class="cell">{{productName}} <span class="text-gray-500">{{sku}}</span></td>
+        <td class="cell">{{batchNumber}}</td>
+        <td class="cell">{{badge movementType}}</td>
+        <td class="cell text-right font-semibold">{{formatNumber quantityChange}}</td>
+        <td class="cell text-right">{{formatNumber quantityBefore}}</td>
+        <td class="cell text-right">{{formatNumber quantityAfter}}</td>
+        <td class="cell">{{#if performedByName}}{{performedByName}}{{else}}-{{/if}}</td>
+        <td class="cell">
+          {{#if link}}<a href="{{link}}" class="text-blue-700 underline">{{referenceType}}</a>{{else}}{{#if referenceType}}{{referenceType}}{{else}}-{{/if}}{{/if}}
+          {{#if reason}}<span class="block text-xs text-gray-500">{{reason}}</span>{{/if}}
+        </td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+</div>
+{{> components/pagination pagination=pagination}}
+{{else}}
+{{> components/empty-state icon="clock-history" title="No movements" hint="Nothing matches these filters."}}
+{{/if}}

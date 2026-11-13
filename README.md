@@ -22,6 +22,8 @@ the day. Managers and accountants read the sales on a dashboard, in a list and t
 | `/returns` | `returns.create` or `returns.approve` | Sales returns in your branch (all branches with `sales.view.all`), filtered by status. Start one from a finished sale (`/sales/:id/return`, within 30 days): pick the batch pieces and quantities coming back and what happens to the units (restock, quarantine, damaged, dispose). With `returns.approve`: approve (never your own return), reject, or process, which restocks `RESTOCK` units, pays the refund by a method the sale was paid with (cash comes out of your open register) and moves the sale to partially refunded or refunded. |
 | `/transfers` | `transfers.manage` or `transfers.approve` | Stock transfers involving your branch (all branches with `sales.view.all`), filtered by status. With `transfers.manage` the destination branch requests batches from another branch, submits, receives (partial receipts allowed, a destination batch is created with the same lot, dates and cost) or closes a shortage with a reason, and the source branch dispatches what it really ships (stock is in transit, in neither branch). With `transfers.approve` the source branch approves or rejects, or calls off an approved transfer before dispatch. |
 | `/prescriptions` | `prescriptions.manage` or `prescriptions.verify` | Prescriptions (chain-wide records), filtered by status and number. With `prescriptions.manage`: record one (prescriber and license, dates, items by SKU with quantities and dosage); with `prescriptions.verify` (pharmacist): verify or reject it. A verified, unexpired prescription is dispensed at the sales screen: enter its number in the Prescription box, add its products, and checkout takes the quantities off it (`POST /api/v1/sales` accepts `prescriptionId`; `GET /api/v1/prescriptions/lookup?number=` finds one). |
+| `/audit` | `audit.view` | The audit trail, newest first, filtered by date, action prefix, entity, entity id and user, with links to the audited document and the old and new values (secrets redacted). Admin only; read-only. |
+| `/reports/movements` | `inventory.view` | The stock movement ledger for your branch (any branch with `sales.view.all`), filtered by type, date, and SKU, name or lot, with links to the source document. |
 | `/purchase-orders` | `purchasing.view` | Purchase orders in your branch (all branches with `sales.view.all`), filtered by status. With `purchasing.manage`: write and edit drafts, submit, send, cancel and close; with `purchasing.approve`: approve or return; with `inventory.receive`: post goods receipts. |
 | `/users` | `users.manage` | List of accounts |
 
@@ -122,6 +124,7 @@ npm run views:check     # every page, layout, partial and helper resolves; rende
 | `transfers.approve` | yes | | | |
 | `prescriptions.manage` | yes | yes | yes | |
 | `prescriptions.verify` | yes | yes | | |
+| `audit.view` | yes | | | |
 
 A database seeded before `products.manage` existed needs a re-seed, or this one grant (admin and pharmacist):
 
