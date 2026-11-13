@@ -8,6 +8,7 @@ import {
   emptyCart,
   normalizeAmount,
   normalizeQuantity,
+  prescriptionShortage,
   removeLine,
   restoreAttempt,
   restoreCart,
@@ -359,5 +360,24 @@ test.group("sale attempts (a lost answer must never become a second sale)", () =
     ]) {
       expect([bad, restoreAttempt(bad)]).toEqual([bad, null]);
     }
+  });
+
+  test("prescriptionShortage names each product with what was asked and what is left", ({
+    expect,
+  }) => {
+    const lines = [{ productId: "p-1", productName: "Amoxicillin" }];
+
+    expect(
+      prescriptionShortage(
+        [
+          { productId: "p-1", requested: "40.000", remaining: "30.000" },
+          { productId: "p-9", requested: "2.000", remaining: "0.000" },
+        ],
+        lines,
+      ),
+    ).toBe(
+      "Amoxicillin: 40 requested, 30 left on the prescription\nA product: 2 requested, none left on the prescription",
+    );
+    expect(prescriptionShortage([], lines)).toBe("");
   });
 });

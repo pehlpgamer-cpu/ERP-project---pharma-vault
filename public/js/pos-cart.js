@@ -353,3 +353,26 @@ export function restoreAttempt(data) {
 
   return { key: data.key, body: data.body, pending: true };
 }
+
+const quantityFormat = new Intl.NumberFormat("en-PH", { maximumFractionDigits: 3 });
+
+/**
+ * The message for a refused prescription quantity: one line per product with what the sale asked for
+ * and what is left on the prescription. `details` is the API's [{ productId, requested, remaining }]
+ * and `lines` the cart's lines (for product names). Empty when there is nothing to say.
+ */
+export function prescriptionShortage(details, lines) {
+  return details
+    .map((detail) => {
+      const line = lines.find((entry) => {
+        return entry.productId === detail.productId;
+      });
+      const name = line ? line.productName : "A product";
+      const left = Number(detail.remaining);
+
+      return `${name}: ${quantityFormat.format(Number(detail.requested))} requested, ${
+        left > 0 ? quantityFormat.format(left) : "none"
+      } left on the prescription`;
+    })
+    .join("\n");
+}

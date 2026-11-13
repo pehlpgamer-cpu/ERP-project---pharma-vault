@@ -93,6 +93,8 @@ test.group("stock count pages", (group) => {
 
     expect(blank.status).toBe(200);
     expect(blank.text).toContain("LOT-A");
+    // every signed-in page locks a form after its first submit, so a double click saves once
+    expect(blank.text).toContain("dataset.submitting");
     expect(refused.status).toBe(422);
     expect(refused.text).toContain("Cannot exceed");
     expect(refused.text).not.toContain(XSS);

@@ -10,6 +10,7 @@ import {
   classifyOutcome,
   emptyCart,
   normalizeAmount,
+  prescriptionShortage,
   removeLine,
   restoreAttempt,
   restoreCart,
@@ -686,6 +687,11 @@ function failureMessage(error, status) {
     return `Not enough stock.\n${stockMessage(error.details)}`;
   }
 
+  if (error?.code === "prescription_quantity" && Array.isArray(error.details)) {
+    return `The prescription does not cover that quantity.
+${prescriptionShortage(error.details, cart.lines)}`;
+  }
+
   return error?.message ?? `The sale could not be saved (error ${status}).`;
 }
 
@@ -760,6 +766,8 @@ async function completeSale() {
     saveCart();
     attempt = null;
     saveAttempt();
+    // the next sale starts without the prescription this one used
+    rememberPrescription(null);
     window.location.assign(`/sales/${encodeURIComponent(payload.data.id)}?print=1`);
 
     return;
@@ -797,7 +805,9 @@ const rememberPrescription = (number) => {
   }
 };
 
-async function loadPrescription() {
+// `restoring`: the number came from the last visit, so a prescription that is no longer usable is
+// dropped quietly instead of shown as an error.
+async function loadPrescription({ restoring = false } = {}) {
   const number = byId("pos-rx-number").value.trim();
 
   if (number === "") {
@@ -835,7 +845,13 @@ async function loadPrescription() {
   } else {
     prescription = null;
     rememberPrescription(null);
-    showPrescription(payload?.error?.message ?? "The prescription could not be loaded.");
+
+    if (restoring) {
+      byId("pos-rx-number").value = "";
+      showPrescription("");
+    } else {
+      showPrescription(payload?.error?.message ?? "The prescription could not be loaded.");
+    }
   }
 
   renderResults();
@@ -941,7 +957,7 @@ try {
 
   if (remembered) {
     byId("pos-rx-number").value = remembered;
-    loadPrescription();
+    loadPrescription({ restoring: true });
   }
 } catch {
   // storage unavailable

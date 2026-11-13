@@ -38,6 +38,35 @@
   </div>
 
   <script>
+    // A form posts once: a second click on Save (or Enter) while the first request is on its way would
+    // create a second document. Confirm dialogs cancel the first submit, so only a submit that goes
+    // ahead locks the form; the lock is lifted when the page is shown again from the back button.
+    (() => {
+      document.addEventListener('submit', (event) => {
+        const form = event.target;
+        if (!(form instanceof HTMLFormElement) || form.method.toLowerCase() !== 'post') return;
+        if (form.dataset.submitting === '1') {
+          event.preventDefault();
+          return;
+        }
+        if (event.defaultPrevented) return;
+        form.dataset.submitting = '1';
+        setTimeout(() => {
+          form.querySelectorAll('button[type="submit"], button:not([type])').forEach((button) => {
+            button.disabled = true;
+          });
+        }, 0);
+      });
+      window.addEventListener('pageshow', (event) => {
+        if (!event.persisted) return;
+        document.querySelectorAll('form[data-submitting]').forEach((form) => {
+          delete form.dataset.submitting;
+          form.querySelectorAll('button[disabled]').forEach((button) => {
+            button.disabled = false;
+          });
+        });
+      });
+    })();
     (() => {
       const button = document.getElementById('nav-toggle');
       const sidebar = document.getElementById('app-sidebar');
