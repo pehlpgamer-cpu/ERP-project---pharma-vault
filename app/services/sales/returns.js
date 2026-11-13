@@ -880,8 +880,19 @@ export async function getReturn(user, id) {
     .where(eq(refunds.salesReturnId, id))
     .limit(1);
 
+  const [sale] = await db.select().from(sales).where(eq(sales.id, salesReturn.saleId));
+  const left = await refundableByMethod(db, sale);
+
   return {
     salesReturn,
+    // the methods this sale can still be refunded by, with what each has left
+    refundable: [...left]
+      .filter(([, amount]) => {
+        return cmp(amount, "0") > 0;
+      })
+      .map(([method, amount]) => {
+        return { method, left: toScale(amount, 2) };
+      }),
     lines: lines.map((line) => {
       return {
         ...line,

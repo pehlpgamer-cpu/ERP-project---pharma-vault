@@ -1,3 +1,4 @@
+import { can, PERMISSIONS } from "../../services/auth/permissions.js";
 import { loadFilterOptions } from "../../services/sales/filterOptions.js";
 import { getSale, listSales } from "../../services/sales/salesQuery.js";
 import { salesScope } from "../../services/sales/scope.js";
@@ -104,6 +105,10 @@ export default {
       pageTitle: `Sale ${sale.invoiceNumber}`,
       layout: "authenticated",
       sale,
+      canReturn:
+        can(req.user, PERMISSIONS.RETURNS_CREATE) &&
+        sale.branch.id === req.user.branchId &&
+        ["COMPLETED", "PARTIALLY_REFUNDED"].includes(sale.status),
       autoPrint: req.query.print === "1",
     });
   },

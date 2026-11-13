@@ -12,6 +12,7 @@ import inventoryController from "../app/http/controllers/inventoryController.js"
 import posController from "../app/http/controllers/posController.js";
 import purchaseOrderController from "../app/http/controllers/purchaseOrderController.js";
 import productController from "../app/http/controllers/productController.js";
+import returnController from "../app/http/controllers/returnController.js";
 import salesController from "../app/http/controllers/salesController.js";
 import stockCountController from "../app/http/controllers/stockCountController.js";
 import supplierController from "../app/http/controllers/supplierController.js";
@@ -33,6 +34,35 @@ router.get("/pos-page", requireAuth, canSell, asyncHandler(posController.page));
 
 router.get("/sales", requireAuth, canViewSales, asyncHandler(salesController.index));
 router.get("/sales/:id", requireAuth, canViewSales, asyncHandler(salesController.show));
+
+const canStartReturn = requirePermission(PERMISSIONS.RETURNS_CREATE);
+const canApproveReturn = requirePermission(PERMISSIONS.RETURNS_APPROVE);
+const canSeeReturns = requirePermission(PERMISSIONS.RETURNS_CREATE, PERMISSIONS.RETURNS_APPROVE);
+
+router.get(
+  "/sales/:id/return",
+  requireAuth,
+  canStartReturn,
+  asyncHandler(returnController.newForm),
+);
+router.post(
+  "/sales/:id/returns",
+  requireAuth,
+  canStartReturn,
+  asyncHandler(returnController.create),
+);
+router.get("/returns", requireAuth, canSeeReturns, asyncHandler(returnController.index));
+router.get("/returns/:id", requireAuth, canSeeReturns, asyncHandler(returnController.show));
+
+for (const [path, guard, handler] of [
+  ["submit", canStartReturn, returnController.submit],
+  ["cancel", canSeeReturns, returnController.cancel],
+  ["approve", canApproveReturn, returnController.approve],
+  ["reject", canApproveReturn, returnController.reject],
+  ["process", canApproveReturn, returnController.process],
+]) {
+  router.post(`/returns/:id/${path}`, requireAuth, guard, asyncHandler(handler));
+}
 
 const canManageProducts = requirePermission(PERMISSIONS.PRODUCTS_MANAGE);
 

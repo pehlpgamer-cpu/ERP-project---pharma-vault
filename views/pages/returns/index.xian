@@ -1,0 +1,51 @@
+{{!-- returns/index: sales return list. Required: returns, total, statusOptions, pagination. --}}
+<div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+  {{> components/page-header title="Returns" icon="arrow-return-left"}}
+  <a href="/sales" class="btn bg-gray-200"><i class="bi bi-receipt" aria-hidden="true"></i> Find a sale to return</a>
+</div>
+
+<form method="GET" action="/returns" class="mb-4 flex flex-wrap items-end gap-3 border border-gray-200 bg-white p-3">
+  <label class="text-sm text-gray-700">Status
+    <select name="status" class="field">
+      {{#each statusOptions}}
+      <option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+      {{/each}}
+    </select>
+  </label>
+  <button type="submit" class="btn"><i class="bi bi-funnel" aria-hidden="true"></i> Filter</button>
+  <a href="/returns" class="btn bg-gray-200">Reset</a>
+</form>
+
+{{#if returns.length}}
+<div class="overflow-x-auto border border-gray-200 bg-white">
+  <table class="w-full text-left text-sm">
+    <thead class="bg-gray-50 text-gray-600">
+      <tr>
+        <th class="cell">Return</th>
+        <th class="cell">Sale</th>
+        <th class="cell">Branch</th>
+        <th class="cell">Reason</th>
+        <th class="cell">Started by</th>
+        <th class="cell text-right">Refund</th>
+        <th class="cell">Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each returns}}
+      <tr class="border-t border-gray-200">
+        <td class="cell whitespace-nowrap font-medium"><a href="/returns/{{id}}" class="text-blue-700 underline">{{returnNumber}}</a></td>
+        <td class="cell whitespace-nowrap"><a href="/sales/{{saleId}}" class="text-blue-700 underline">{{invoiceNumber}}</a></td>
+        <td class="cell">{{branchName}}</td>
+        <td class="cell">{{reason}}</td>
+        <td class="cell">{{createdByName}}</td>
+        <td class="cell text-right">{{currency refundAmount}}</td>
+        <td class="cell">{{badge status}}</td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+</div>
+{{> components/pagination pagination=pagination}}
+{{else}}
+{{> components/empty-state icon="arrow-return-left" title="No returns" hint="Open a finished sale and choose Return items to start one."}}
+{{/if}}
