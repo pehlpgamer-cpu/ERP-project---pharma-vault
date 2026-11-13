@@ -108,7 +108,7 @@ Take a backup first (below). `database/sql/schema.sql` is the full schema for ne
 
 ## Backups
 
-The `backup` service writes a compressed dump to `./backups/` on the VPS a minute after start and then
+The `backup` service writes a compressed dump to `./backups/` on the VPS at start-up and then
 every 24 hours, keeping the last `BACKUP_KEEP_DAYS` (14). **Copy them off the VPS** (a second
 machine or object storage), or a lost VPS loses the backups too:
 

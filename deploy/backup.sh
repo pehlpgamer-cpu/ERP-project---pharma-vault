@@ -1,6 +1,6 @@
 #!/bin/sh
 # Daily logical backup of the Pharma Vault database, run by the `backup` service in compose.prod.yaml.
-# Dumps run once a minute after start-up and then every 24 hours; files older than BACKUP_KEEP_DAYS
+# A dump is taken at start-up and then every 24 hours; files older than BACKUP_KEEP_DAYS
 # are deleted. Restore: see docs/DEPLOYMENT.md.
 set -eu
 

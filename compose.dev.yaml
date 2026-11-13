@@ -1,79 +1,121 @@
+# Pharma Vault for local development: the app with live reload, MySQL, and a test database.
+#
+#   docker compose -f compose.dev.yaml up                     # http://localhost:3000
+#   docker compose -f compose.dev.yaml exec app npm run db:seed        # demo data (first time)
+#   docker compose -f compose.dev.yaml --profile test run --rm test    # the test suite
+#
+# Your source is mounted into the container, so edits reload the app. node_modules lives in a Docker
+# volume (not your disk), so the container's Linux packages never mix with your host's. The compose
+# file sets every connection variable itself: your .env is not needed (and is not used for the
+# database). The credentials below are for this local stack only and are published on 127.0.0.1.
+# Production is compose.prod.yaml (docs/DEPLOYMENT.md).
+
+name: pharma-vault-dev
+
+x-app-env: &app-env
+  NODE_ENV: development
+  PORT: 3000
+  SECRET_KEY: dev-only-secret-not-for-production
+  SEED_PASSWORD: PharmaVault-demo-2026
+  APP_TIMEZONE: Asia/Manila
+  MYSQL_HOST: mysql
+  MYSQL_PORT: 3306
+  MYSQL_USER: pharma_vault
+  MYSQL_PASSWORD: pharma_vault_dev
+  # file watchers need polling on bind mounts from Windows and macOS
+  CHOKIDAR_USEPOLLING: "true"
+
+x-workspace: &workspace
+  image: node:24-bookworm-slim
+  init: true
+  working_dir: /workspace
+  volumes:
+    - .:/workspace
+    - node_modules:/workspace/node_modules
+  depends_on:
+    mysql:
+      condition: service_healthy
+
 services:
-  devcontainer:
-    image: node:24
-    init: true
-    user: node
-    working_dir: /workspace
-    command: sleep infinity
-
-    volumes:
-      - .:/workspace
-      - node_modules:/workspace/node_modules # best practice (behavior consistency & performance)
-
-    ports:
-      - "${PORT}:${PORT}"
-
-    environment:
-      NODE_ENV: development
-      PORT: ${PORT}
-
-      MYSQL_HOST: mysql
-      MYSQL_PORT: 3306
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-
-    depends_on:
-      mysql:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-
   mysql:
-    image: mysql:8.4 # 26.7.0 is not a valid version --> https://hub.docker.com/_/mysql/tags?name=8.4&utm_source=chatgpt.com
+    image: mysql:8.4
     restart: unless-stopped
-
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-
+      MYSQL_ROOT_PASSWORD: root_dev
+      MYSQL_DATABASE: pharma_vault
+      MYSQL_USER: pharma_vault
+      MYSQL_PASSWORD: pharma_vault_dev
+      TZ: UTC
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      - --mysqlx=OFF
+      # a local database: trade durability for fast tests
+      - --skip-log-bin
+      - --innodb-flush-log-at-trx-commit=2
     ports:
-      - "3306:3306"
-
+      - "127.0.0.1:${DEV_DB_PORT:-3307}:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-
+      # these run once, on the first start (an empty volume): the schema, then a second, empty copy of it
+      # named pharma_vault_test for the test suite
+      - ./database/sql/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./deploy/dev-test-database.sh:/docker-entrypoint-initdb.d/02-test-database.sh:ro
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"
-        ]
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
       interval: 5s
       timeout: 5s
-      retries: 20
-      start_period: 15s
+      retries: 30
+      start_period: 30s
 
-  redis:
-    image: redis:8.10.2
+  app:
+    <<: *workspace
+    restart: unless-stopped
+    environment:
+      <<: *app-env
+      MYSQL_DATABASE: pharma_vault
+    ports:
+      - "127.0.0.1:${DEV_APP_PORT:-3000}:3000"
+    # the named volume starts root-owned: hand it to the node user, install packages once, then watch
+    command:
+      - sh
+      - -c
+      - >-
+        chown node:node /workspace/node_modules &&
+        exec runuser -u node -- sh -c
+        '[ -x node_modules/.bin/nodemon ] || npm ci; exec npx nodemon -L src/server.js'
 
+  # `docker compose -f compose.dev.yaml --profile test run --rm test`: runs against pharma_vault_test only
+  test:
+    <<: *workspace
+    profiles: ["test"]
+    environment:
+      <<: *app-env
+      MYSQL_DATABASE: pharma_vault_test
     volumes:
-      - redis-data:/data
+      - .:/workspace
+      - node_modules:/workspace/node_modules
+      # `npm test` loads .env.test with override: give it the container's settings, not the host file's
+      - ./deploy/dev-test.env:/workspace/.env.test:ro
+    command:
+      - sh
+      - -c
+      - >-
+        chown node:node /workspace/node_modules &&
+        exec runuser -u node -- sh -c
+        '[ -x node_modules/.bin/nodemon ] || npm ci; exec npm test'
 
-    healthcheck:
-      test:
-        ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-      start_period: 10s
+  # For the VS Code Dev Containers extension (.devcontainer/devcontainer.json): an idle shell inside
+  # the same environment; run npm commands in its terminal.
+  devcontainer:
+    <<: *workspace
+    profiles: ["devcontainer"]
+    user: node
+    command: sleep infinity
+    environment:
+      <<: *app-env
+      MYSQL_DATABASE: pharma_vault
 
 volumes:
-  node_modules:
   mysql_data:
-  redis-data:
+  node_modules:

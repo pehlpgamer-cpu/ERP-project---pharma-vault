@@ -55,6 +55,23 @@ npm start                   # http://localhost:3000
 database that already has branches. It seeds everything through the application's own services, so
 the history it creates has the stock, cash ledger and invoice numbers the app itself would produce.
 
+### Local development with Docker
+
+If you would rather not install Node and MySQL, `compose.dev.yaml` runs the app (live reload on your
+edits), MySQL and a ready test database:
+
+```bash
+docker compose -f compose.dev.yaml up -d                                  # http://localhost:3000
+docker compose -f compose.dev.yaml exec app npm run db:seed               # demo data, first time only
+docker compose -f compose.dev.yaml --profile test run --rm test           # the whole test suite
+docker compose -f compose.dev.yaml down                                   # stop (data is kept; add -v to wipe it)
+```
+
+MySQL is also published on `127.0.0.1:3307` for a database client (user `pharma_vault`, password
+`pharma_vault_dev`, databases `pharma_vault` and `pharma_vault_test`). Change the host ports with
+`DEV_APP_PORT` and `DEV_DB_PORT`. These settings are local-only and independent of your `.env`. The
+`devcontainer` profile backs the VS Code Dev Containers setup in `.devcontainer/`.
+
 ### Production
 
 A Docker Compose stack for a VPS, published through a Cloudflare Tunnel (no open web ports), with a
