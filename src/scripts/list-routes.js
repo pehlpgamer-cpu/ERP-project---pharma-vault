@@ -6,13 +6,15 @@ import { routeGroups } from "../../routes/routes.js";
 const routes = [];
 
 const routerGroups = new Map(
-  routeGroups.map(({ router, prefix = "", name, group }) => {return [
-    router,
-    {
-      name: group ?? name ?? (prefix || "default"),
-      prefix,
-    },
-  ]}),
+  routeGroups.map(({ router, prefix = "", name, group }) => {
+    return [
+      router,
+      {
+        name: group ?? name ?? (prefix || "default"),
+        prefix,
+      },
+    ];
+  }),
 );
 
 function joinPaths(...parts) {
@@ -29,12 +31,19 @@ function walk(stack, prefix = "", groupName = "default") {
   for (const layer of stack ?? []) {
     if (layer.route) {
       const methods = Object.keys(layer.route.methods)
-        .filter((method) => {return layer.route.methods[method]})
-        .map((method) => {return method.toUpperCase()});
+        .filter((method) => {
+          return layer.route.methods[method];
+        })
+        .map((method) => {
+          return method.toUpperCase();
+        });
 
       const handler =
-        layer.route.stack?.map((entry) => {return entry.handle?.name ?? "anonymous"}).join(" → ") ??
-        "anonymous";
+        layer.route.stack
+          ?.map((entry) => {
+            return entry.handle?.name ?? "anonymous";
+          })
+          .join(" → ") ?? "anonymous";
 
       const routePath =
         typeof layer.route.path === "string" ? layer.route.path : String(layer.route.path);
@@ -101,7 +110,11 @@ function parseArguments(argv) {
 
   return {
     help,
-    groups: groups.map((group) => {return group.trim()}).filter(Boolean),
+    groups: groups
+      .map((group) => {
+        return group.trim();
+      })
+      .filter(Boolean),
   };
 }
 
@@ -172,18 +185,25 @@ try {
     const filteredRoutes =
       groupFilters.length === 0
         ? routes
-        : routes.filter((route) =>
-            {return groupFilters.some((group) => route.group.toLowerCase() === group.toLowerCase())},
-          );
+        : routes.filter((route) => {
+            return groupFilters.some((group) => {
+              return route.group.toLowerCase() === group.toLowerCase();
+            });
+          });
 
-    const availableGroups = [...new Set(routes.map((route) => {return route.group}))];
+    const availableGroups = [
+      ...new Set(
+        routes.map((route) => {
+          return route.group;
+        }),
+      ),
+    ];
 
-    const missingGroups = groupFilters.filter(
-      (group) =>
-        {return !availableGroups.some(
-          (availableGroup) => availableGroup.toLowerCase() === group.toLowerCase(),
-        )},
-    );
+    const missingGroups = groupFilters.filter((group) => {
+      return !availableGroups.some((availableGroup) => {
+        return availableGroup.toLowerCase() === group.toLowerCase();
+      });
+    });
 
     if (missingGroups.length > 0) {
       console.error(`❌ Unknown route group(s): ${missingGroups.join(", ")}`);
@@ -207,12 +227,26 @@ try {
       } else {
         const methodWidth = Math.max(
           6,
-          ...filteredRoutes.flatMap((route) => {return route.methods.map((method) => method.length)}),
+          ...filteredRoutes.flatMap((route) => {
+            return route.methods.map((method) => {
+              return method.length;
+            });
+          }),
         );
 
-        const pathWidth = Math.max(4, ...filteredRoutes.map((route) => {return route.path.length}));
+        const pathWidth = Math.max(
+          4,
+          ...filteredRoutes.map((route) => {
+            return route.path.length;
+          }),
+        );
 
-        const handlerWidth = Math.max(7, ...filteredRoutes.map((route) => {return route.handler.length}));
+        const handlerWidth = Math.max(
+          7,
+          ...filteredRoutes.map((route) => {
+            return route.handler.length;
+          }),
+        );
 
         let currentGroup = null;
 
@@ -230,7 +264,11 @@ try {
 
           const number = String(index + 1).padStart(3);
 
-          const methodText = route.methods.map((method) => {return method.padEnd(methodWidth)}).join(", ");
+          const methodText = route.methods
+            .map((method) => {
+              return method.padEnd(methodWidth);
+            })
+            .join(", ");
 
           const pathText = route.path.padEnd(pathWidth);
 

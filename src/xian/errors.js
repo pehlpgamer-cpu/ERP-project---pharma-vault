@@ -17,8 +17,6 @@ export class XianTemplateError extends Error {
   }
 }
 
-
-
 // Attempts to extract line/column information from a Handlebars compiler error.
 function extractLocation(error) {
   return {
@@ -27,7 +25,6 @@ function extractLocation(error) {
     column: error?.columnNumber ?? error?.column ?? null,
   };
 }
-
 
 // Converts an arbitrary error into a XianTemplateError. (FOR ENGINE)
 export function createTemplateError(error, templatePath) {

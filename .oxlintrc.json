@@ -1,6 +1,13 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "ignorePatterns": ["scripts/check-views.mjs"],
+  "ignorePatterns": [
+    "scripts/check-views.mjs",
+    ".claude/**",
+    ".planning/**",
+    ".superpowers/**",
+    "docs/**",
+    "database/sql/**"
+  ],
   "plugins": [
     "typescript",
     "unicorn",
@@ -10,8 +17,17 @@
     "correctness": "error"
   },
   "rules": {
-    "eslint/curly": ["error", "all"],
-    "arrow-body-style": ["error", "always", { "requireReturnForObjectLiteral": true }],
+    "eslint/curly": [
+      "error",
+      "all"
+    ],
+    "arrow-body-style": [
+      "error",
+      "always",
+      {
+        "requireReturnForObjectLiteral": true
+      }
+    ],
     "default-case-last": "error",
     "default-param-last": "error"
   },

@@ -59,8 +59,7 @@ export async function registerPartial(handlebars, partialsDirectory, filePath) {
   return partialName;
 }
 
-
-// Recursively registers all Xian partials. (FOR ENGINE) 
+// Recursively registers all Xian partials. (FOR ENGINE)
 export async function registerPartials(handlebars, partialsDirectory) {
   const files = await findPartialFiles(partialsDirectory);
 

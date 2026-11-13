@@ -11,8 +11,7 @@ export async function resolveLayout(layoutsDirectory, layoutName) {
 
   try {
     await fs.access(layoutPath);
-  } 
-  catch {
+  } catch {
     throw new Error(`Xian layout "${layoutName}" was not found at "${layoutPath}".`);
   }
 

@@ -34,7 +34,10 @@ export const purchaseReturnItems = t.mysqlTable(
         })
         .onUpdate("cascade")
         .onDelete("restrict"),
-      t.check("chk_purchase_return_items_qty", sql`${table.quantity} > 0 AND ${table.unitCost} >= 0`),
+      t.check(
+        "chk_purchase_return_items_qty",
+        sql`${table.quantity} > 0 AND ${table.unitCost} >= 0`,
+      ),
     ];
   },
 );

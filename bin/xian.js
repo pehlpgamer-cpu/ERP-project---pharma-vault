@@ -1,75 +1,47 @@
-import { execSync } from "child_process";
-import path from "path";
-import { fileURLToPath } from "url";
+import { execSync } from "node:child_process";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const projectRoot = path.join(__dirname, "..");
+const projectRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 const args = process.argv.slice(2);
 const command = args[0] || "start";
 const rest = args.slice(1);
 
-// Map short aliases to full script names
+// Short aliases for the npm scripts that exist
 const aliases = {
-  "": "start",
   s: "start",
-  start: "start",
-  d: "dev",
-  dev: "dev",
-  m: "migrate",
-  migrate: "migrate",
+  d: "xian",
+  dev: "xian",
   t: "test",
-  test: "test",
-  b: "build",
-  build: "build",
-  r: "run",
-  run: "run",
-  dist: "dist",
 };
-
-const script = aliases[command] || command;
-const fullCmd = `npm run ${script}${rest.length ? " " + rest.join(" ") : ""}`;
 
 if (command === "--help" || command === "-h" || command === "help") {
   console.log(`
-🔥 XianFire CLI
+Pharma Vault CLI
 
 Usage:
   xian [command] [args]
 
 Commands:
   xian                  Start the server (alias: xian start)
-  xian start            Start the server
   xian dev              Start with nodemon (hot reload)
-  xian migrate          Run database migrations
-  xian create:model <Name>       Generate a model
-  xian create:controller <Name>  Generate a controller
+  xian test             Run the test suite
   xian route:list       List all registered routes
-  xian route:cache      Set up route caching middleware
-  xian test             Run Jest tests
-  xian test:watch       Run tests in watch mode
-  xian test:coverage    Run tests with coverage
-  xian build            Build production bundle
-  xian run              Run server + Electron concurrently
-  xian dist             Build distributable package
+  xian views:check      Check that every page, partial and helper resolves
+  xian db:seed          Load demo data into an empty development database
+  xian db:bootstrap     Create roles, permissions, a branch and the first admin (production-safe)
+  xian db:schema        Regenerate database/sql/schema.sql from the models
   xian help             Show this help
-
-Examples:
-  xian
-  xian dev
-  xian create:model User
-  xian create:controller userController
-  xian route:list
-  xian route:cache
-  xian test
-  xian migrate
 `);
   process.exit(0);
 }
 
+const script = aliases[command] ?? command;
+const fullCmd = `npm run ${script}${rest.length > 0 ? ` ${rest.join(" ")}` : ""}`;
+
 try {
   execSync(fullCmd, { cwd: projectRoot, stdio: "inherit" });
-} catch (e) {
-  process.exit(e.status || 1);
+} catch (error) {
+  process.exit(error.status || 1);
 }

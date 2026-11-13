@@ -1,7 +1,6 @@
 import chokidar from "chokidar";
 import { registerPartial, unregisterPartial } from "./partials.js";
 
-
 // Watches Xian template directories in dev mode only. (FOR ENGINE)
 export function watchXianFiles({
   handlebars,

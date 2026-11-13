@@ -8,7 +8,6 @@ function createHelperName(fileName) {
   return fileName.replace(/\.[^/.]+$/, "").replace(/[^a-zA-Z0-9_-]/g, "_");
 }
 
-
 // Finds helper files.
 async function findHelperFiles(directory) {
   const entries = await fs.readdir(directory, {
@@ -16,10 +15,13 @@ async function findHelperFiles(directory) {
   });
 
   return entries
-    .filter((entry) => {return entry.isFile() && /\.(js|mjs)$/.test(entry.name)})
-    .map((entry) => {return path.join(directory, entry.name)});
+    .filter((entry) => {
+      return entry.isFile() && /\.(js|mjs)$/.test(entry.name);
+    })
+    .map((entry) => {
+      return path.join(directory, entry.name);
+    });
 }
-
 
 // Registers all helpers inside the helpers directory. (FOR ENGINE)
 export async function registerHelpers(handlebars, helpersDirectory) {

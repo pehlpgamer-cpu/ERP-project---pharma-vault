@@ -1,4 +1,18 @@
 {
   "$schema": "./node_modules/oxfmt/configuration_schema.json",
-  "ignorePatterns": ["scripts/check-views.mjs"]
+  "ignorePatterns": [
+    "scripts/check-views.mjs",
+    ".claude/**",
+    ".planning/**",
+    ".superpowers/**",
+    "docs/**",
+    "database/sql/**",
+    "*.md",
+    "*.yaml",
+    "*.yml",
+    ".devcontainer/**",
+    ".dependency-cruiser.cjs",
+    ".oxlintrc.json",
+    ".oxfmtrc.json"
+  ]
 }

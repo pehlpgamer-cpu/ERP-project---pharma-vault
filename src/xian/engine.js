@@ -18,8 +18,7 @@ export async function createXianEngine({
   watch = environment === "development",
   cache = environment === "production",
 }) {
-  
-  const xian = hbs.create(); // isolated HBS instance: We DO NOT use the global `hbs` instance for application registrations.  
+  const xian = hbs.create(); // isolated HBS instance: We DO NOT use the global `hbs` instance for application registrations.
   const handlebars = xian.handlebars; // The actual Handlebars implementation behind this HBS instance.
 
   // Application-level compiled template cache.
@@ -38,16 +37,15 @@ export async function createXianEngine({
 
     try {
       template = handlebars.compile(source, {
-        strict, // Development strict mode detects missing properties instead of silently returning undefined. 
+        strict, // Development strict mode detects missing properties instead of silently returning undefined.
         noEscape: false, //Keep HTML escaping enabled.
       });
     } catch (error) {
       throw createTemplateError(error, filePath);
     }
 
-    
     //Cache only when enabled.
-    
+
     if (cache) {
       templateCache.set(filePath, template);
     }
@@ -55,7 +53,7 @@ export async function createXianEngine({
     return template;
   }
 
-   // Render a layout around page content.
+  // Render a layout around page content.
   async function renderLayout({ layoutName, body, options }) {
     const layoutPath = await resolveLayout(layoutsDirectory, layoutName);
 
@@ -74,10 +72,9 @@ export async function createXianEngine({
     }
   }
 
-   // Express view-engine interface.
+  // Express view-engine interface.
   async function render(filePath, options, callback) {
     try {
-      
       const template = await compileTemplate(filePath); //Compile page.
       // Express puts request locals inside options._locals.
       // We don't want to expose Express internals directly as template data.
@@ -101,8 +98,7 @@ export async function createXianEngine({
       });
 
       callback(null, html);
-    } 
-    catch (error) {
+    } catch (error) {
       const xianError = createTemplateError(error, filePath);
 
       callback(xianError);

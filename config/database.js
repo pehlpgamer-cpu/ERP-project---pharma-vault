@@ -1,10 +1,5 @@
-
 export const dbConfig = {
-  development: {
+  development: {},
 
-  },
-  
-  production: {
-
-  }
-}
+  production: {},
+};
