@@ -184,6 +184,12 @@ router.post(
   asyncHandler(prescriptionController.verify),
 );
 router.post(
+  "/prescriptions/:id/revoke",
+  requireAuth,
+  canVerifyRx,
+  asyncHandler(prescriptionController.revoke),
+);
+router.post(
   "/prescriptions/:id/reject",
   requireAuth,
   canVerifyRx,

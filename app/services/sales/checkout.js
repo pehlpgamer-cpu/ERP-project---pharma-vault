@@ -387,16 +387,10 @@ async function postSale(tx, { user, input, key, now, onStep, meta }) {
     }
   }
 
-  if (rx) {
-    if (rxWanted.size === 0) {
-      throw new HttpError(
-        422,
-        "prescription_unused",
-        "None of the items needs this prescription, so it cannot be attached",
-        [{ path: "prescriptionId", message: "Not used by any item" }],
-      );
-    }
+  // a prescription that no item needs is simply not attached (the sales screen sends the loaded one)
+  const rxUsed = rx !== null && rxWanted.size > 0;
 
+  if (rxUsed) {
     checkQuantities(rx.items, rxWanted);
   }
 
@@ -410,7 +404,7 @@ async function postSale(tx, { user, input, key, now, onStep, meta }) {
   );
   const total = subtotal;
   const { tendered, change } = checkPayments(input.payments, total);
-  const rxCustomer = rx?.prescription.customerId ?? null;
+  const rxCustomer = rxUsed ? rx.prescription.customerId : null;
 
   if (input.customerId && rxCustomer && input.customerId !== rxCustomer) {
     throw invalidField("customerId", "This prescription belongs to another customer");
@@ -548,7 +542,9 @@ async function postSale(tx, { user, input, key, now, onStep, meta }) {
   await tx.insert(saleItems).values(itemRows);
   await tx.insert(saleItemBatches).values(itemBatchRows);
 
-  const rxStatus = rx ? await applyDispensing(tx, { ...rx, saleId, wanted: rxWanted, now }) : null;
+  const rxStatus = rxUsed
+    ? await applyDispensing(tx, { ...rx, saleId, wanted: rxWanted, now })
+    : null;
 
   await onStep?.("sale-inserted");
 
@@ -612,7 +608,7 @@ async function postSale(tx, { user, input, key, now, onStep, meta }) {
       amountPaid: tendered,
       change,
       lines: lines.length,
-      ...(rx ? { prescriptionId: rx.prescription.id, prescriptionStatus: rxStatus } : {}),
+      ...(rxUsed ? { prescriptionId: rx.prescription.id, prescriptionStatus: rxStatus } : {}),
     },
     ...meta,
   });

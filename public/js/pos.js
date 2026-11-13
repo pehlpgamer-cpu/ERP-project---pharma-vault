@@ -23,6 +23,7 @@ const config = JSON.parse(root.dataset.config);
 
 const STORAGE_KEY = "pos-cart";
 const ATTEMPT_KEY = "pos-attempt";
+const RX_KEY = "pos-rx";
 const SEARCH_DELAY_MS = 250;
 const METHODS = [
   ["CASH", "Cash"],
@@ -783,6 +784,19 @@ function showPrescription(message) {
   byId("pos-rx-clear").hidden = prescription === null;
 }
 
+// the loaded prescription number survives a reload, like the cart
+const rememberPrescription = (number) => {
+  try {
+    if (number) {
+      sessionStorage.setItem(RX_KEY, number);
+    } else {
+      sessionStorage.removeItem(RX_KEY);
+    }
+  } catch {
+    // storage unavailable: the box simply starts empty
+  }
+};
+
 async function loadPrescription() {
   const number = byId("pos-rx-number").value.trim();
 
@@ -807,6 +821,7 @@ async function loadPrescription() {
 
   if (payload?.data) {
     prescription = payload.data;
+    rememberPrescription(prescription.prescriptionNumber);
 
     const left = prescription.items
       .map((item) => {
@@ -819,6 +834,7 @@ async function loadPrescription() {
     );
   } else {
     prescription = null;
+    rememberPrescription(null);
     showPrescription(payload?.error?.message ?? "The prescription could not be loaded.");
   }
 
@@ -827,6 +843,7 @@ async function loadPrescription() {
 
 function clearPrescription() {
   prescription = null;
+  rememberPrescription(null);
   byId("pos-rx-number").value = "";
   showPrescription("");
   renderResults();
@@ -897,9 +914,9 @@ byId("pos-clear").addEventListener("click", async () => {
   attempt = null;
   saveCart();
   saveAttempt();
+  clearPrescription();
   renderCart();
   renderPayments();
-  renderResults();
   refreshLock();
   search.focus();
 });
@@ -918,6 +935,18 @@ document.addEventListener("keydown", (event) => {
 
 cart = loadCart();
 attempt = loadAttempt();
+
+try {
+  const remembered = sessionStorage.getItem(RX_KEY);
+
+  if (remembered) {
+    byId("pos-rx-number").value = remembered;
+    loadPrescription();
+  }
+} catch {
+  // storage unavailable
+}
+
 renderResults();
 renderCart();
 renderPayments();

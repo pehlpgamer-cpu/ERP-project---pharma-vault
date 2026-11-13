@@ -1,5 +1,5 @@
 {{!--
-  prescriptions/show: one prescription with items and linked sales. Required: prescription, items, sales, canReview.
+  prescriptions/show: one prescription with items and linked sales. Required: prescription, items, sales, canReview, canRevoke.
 --}}
 <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
   {{> components/page-header title=prescription.prescriptionNumber icon="file-medical"}}
@@ -56,10 +56,20 @@
   <form method="POST" action="/prescriptions/{{prescription.id}}/verify" data-confirm="Verify this prescription? It can then be dispensed at the counter."><button type="submit" class="btn">Verify</button></form>
   <details>
     <summary class="btn cursor-pointer bg-gray-200">Reject</summary>
-    <form method="POST" action="/prescriptions/{{prescription.id}}/reject" class="mt-1 flex flex-col gap-1">
+    <form method="POST" action="/prescriptions/{{prescription.id}}/reject" class="mt-1 flex flex-col gap-1" data-confirm="Reject this prescription? This cannot be undone.">
       <input type="text" name="reason" required maxlength="500" placeholder="Why it is rejected" aria-label="Reason" class="field">
       <button type="submit" class="btn">Reject prescription</button>
     </form>
   </details>
 </div>
+{{/if}}
+
+{{#if canRevoke}}
+<details>
+  <summary class="cursor-pointer text-red-700 underline">Revoke this verified prescription</summary>
+  <form method="POST" action="/prescriptions/{{prescription.id}}/revoke" class="mt-1 flex flex-col gap-1" data-confirm="Revoke this prescription? It can no longer be dispensed at any branch.">
+    <input type="text" name="reason" required maxlength="500" placeholder="Why it is withdrawn" aria-label="Reason" class="field">
+    <button type="submit" class="btn">Revoke prescription</button>
+  </form>
+</details>
 {{/if}}

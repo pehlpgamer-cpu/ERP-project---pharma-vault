@@ -5,6 +5,7 @@ import {
   PRESCRIPTION_STATUSES,
   recordPrescription,
   rejectPrescription,
+  revokePrescription,
   verifyPrescription,
 } from "../../services/sales/prescriptions.js";
 import { businessDate } from "../../services/support/time.js";
@@ -78,6 +79,10 @@ const reviewAction = (name) => {
   const { run, done } = {
     verify: { run: verifyPrescription, done: "Prescription verified" },
     reject: { run: rejectPrescription, done: "Prescription rejected" },
+    revoke: {
+      run: revokePrescription,
+      done: "Prescription revoked: it can no longer be dispensed",
+    },
   }[name];
 
   return async (req, res) => {
@@ -191,9 +196,13 @@ export default {
       items,
       sales,
       canReview: pending && can(req.user, PERMISSIONS.PRESCRIPTIONS_VERIFY),
+      canRevoke:
+        ["VERIFIED", "PARTIALLY_DISPENSED"].includes(prescription.status) &&
+        can(req.user, PERMISSIONS.PRESCRIPTIONS_VERIFY),
     });
   },
 
   verify: reviewAction("verify"),
   reject: reviewAction("reject"),
+  revoke: reviewAction("revoke"),
 };

@@ -18,6 +18,7 @@ import {
   lookupDispensable,
   recordPrescription,
   rejectPrescription,
+  revokePrescription,
   verifyPrescription,
 } from "../../app/services/sales/prescriptions.js";
 import { resetDatabase } from "../helpers/db.js";
@@ -325,13 +326,12 @@ test.group("prescriptions", (group) => {
     expect((await itemOf(id)).totalDispensedQuantity).toBe("0.000");
   });
 
-  test("products not on the prescription, unused or foreign prescriptions are refused", async ({
+  test("products not on the prescription or foreign prescriptions are refused", async ({
     expect,
   }) => {
     const ctx = await setup();
     const id = await verified(ctx);
     const offList = await failure(sell(ctx, id, "1", ctx.other));
-    const unused = await failure(sell(ctx, id, "1", ctx.otc));
     const unknown = await failure(sell(ctx, randomUUID(), "1"));
     const stranger = await makeCustomer({ firstName: "Ben", lastName: "Cruz" });
     const mismatch = await failure(
@@ -349,7 +349,6 @@ test.group("prescriptions", (group) => {
     );
 
     expect(offList.code).toBe("prescription_required");
-    expect(unused.code).toBe("prescription_unused");
     expect(unknown.details[0].path).toBe("prescriptionId");
     expect(mismatch.details[0].path).toBe("customerId");
     expect(await db.select().from(sales)).toHaveLength(0);
@@ -378,6 +377,117 @@ test.group("prescriptions", (group) => {
 
     expect((await itemOf(id)).totalDispensedQuantity).toBe("5.000");
     expect(await db.select().from(dispensingItems)).toHaveLength(1);
+  });
+
+  test("a prescription no item needs is simply not attached", async ({ expect }) => {
+    const ctx = await setup();
+    const id = await verified(ctx);
+
+    await sell(ctx, id, "2", ctx.otc);
+
+    expect(await db.select().from(dispensings)).toHaveLength(0);
+    expect(await statusOf(id)).toBe("VERIFIED");
+    expect(await db.select().from(salePrescriptions)).toHaveLength(0);
+  });
+
+  test("an over-the-counter product on the prescription does not keep it open", async ({
+    expect,
+  }) => {
+    const ctx = await setup();
+    const id = await verified(ctx, {
+      items: [
+        {
+          sku: ctx.rx.product.sku,
+          prescribedQuantity: "30",
+          dosageInstructions: "1 capsule three times a day",
+        },
+        { sku: ctx.otc.product.sku, prescribedQuantity: "10", dosageInstructions: "as needed" },
+      ],
+    });
+
+    await sell(ctx, id, "30");
+
+    expect(await statusOf(id)).toBe("FULLY_DISPENSED");
+    expect((await failure(sell(ctx, id, "1"))).code).toBe("prescription_invalid");
+  });
+
+  test("a verified prescription can be revoked, with a reason, and stops being dispensable", async ({
+    expect,
+  }) => {
+    const ctx = await setup();
+    const id = await verified(ctx);
+    const byCashier = await failure(
+      revokePrescription(ctx.cashier, id, { reason: "x" }, { now: NOW }),
+    );
+    const noReason = await failure(revokePrescription(ctx.pharmacist, id, {}, { now: NOW }));
+
+    expect(byCashier.status).toBe(403);
+    expect(noReason.details[0].path).toBe("reason");
+
+    await sell(ctx, id, "5");
+    await revokePrescription(ctx.pharmacist, id, { reason: "Altered quantity" }, { now: NOW });
+
+    expect(await statusOf(id)).toBe("REJECTED");
+    expect((await failure(sell(ctx, id, "1"))).code).toBe("prescription_invalid");
+  });
+
+  test("a physician is matched by license despite Dr., case and punctuation", async ({
+    expect,
+  }) => {
+    const ctx = await setup();
+
+    await record(ctx);
+    await record(ctx, { physician: { fullName: "maria  santos", licenseNumber: "PRC-12345" } });
+    await record(ctx, {
+      physician: { fullName: "Dra. Maria Santos.", licenseNumber: "PRC-12345" },
+    });
+
+    expect(await db.select().from(prescribingPhysicians)).toHaveLength(1);
+  });
+
+  test("a box counts as its base units and two lines of one product are summed", async ({
+    expect,
+  }) => {
+    const ctx = await setup();
+    const boxed = await makeProduct({
+      branchId: ctx.branch.id,
+      name: "Azithromycin 500 mg Tablet",
+      classification: "PRESCRIPTION",
+      requiresPrescription: true,
+      units: [
+        { name: "Tablet", factor: "1", base: true, price: "20.0000" },
+        { name: "Box", factor: "10", price: "180.0000" },
+      ],
+      batches: [{ quantity: "500", batchNumber: "AZI-1" }],
+    });
+    const id = await verified(ctx, {
+      items: [{ sku: boxed.product.sku, prescribedQuantity: "30", dosageInstructions: "1 daily" }],
+    });
+    const call = (lines) => {
+      return createSale(
+        ctx.cashier,
+        {
+          customerId: null,
+          prescriptionId: id,
+          items: lines,
+          payments: [{ method: "CASH", amount: "1000.00", reference: null }],
+        },
+        randomUUID(),
+        { now: NOW },
+      );
+    };
+    const box = { productUnitId: boxed.units[1].id, quantity: "2" };
+    const loose = (quantity) => {
+      return { productUnitId: boxed.units[0].id, quantity };
+    };
+
+    // 2 boxes (20 tablets) + 11 loose tablets = 31 > 30
+    expect((await failure(call([box, loose("11")]))).code).toBe("prescription_quantity");
+
+    await call([box, loose("10")]);
+
+    expect((await itemOf(id)).totalDispensedQuantity).toBe("30.000");
+    expect(await statusOf(id)).toBe("FULLY_DISPENSED");
   });
 
   test("a prescription that expired cannot be dispensed", async ({ expect }) => {

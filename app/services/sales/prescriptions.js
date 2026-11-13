@@ -52,6 +52,16 @@ const text = (value) => {
   return typeof value === "string" ? value.trim() : "";
 };
 
+// names compare without case, punctuation, spacing or a leading Dr./Dra.
+const sameName = (name) => {
+  return name
+    .toLowerCase()
+    .replace(/^(dr|dra)\.?\s+/, "")
+    .replace(/[^a-z0-9 ]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+};
+
 const atMidnight = (day) => {
   return new Date(`${day}T00:00:00Z`);
 };
@@ -95,7 +105,7 @@ async function checkRecord(tx, input, today) {
   const date = text(input?.prescriptionDate);
   const until = text(input?.validUntil);
 
-  if (!isRealDay(date) || date > today) {
+  if (!isRealDay(date) || date > today || date < "1900-01-01") {
     add_("prescriptionDate", "Enter the date on the prescription (not in the future)");
   }
 
@@ -112,7 +122,7 @@ async function checkRecord(tx, input, today) {
       .where(eq(prescribingPhysicians.licenseNumber, license))
       .limit(1);
 
-    if (physicianRow && physicianRow.fullName.trim().toLowerCase() !== fullName.toLowerCase()) {
+    if (physicianRow && sameName(physicianRow.fullName) !== sameName(fullName)) {
       add_(
         "physician.licenseNumber",
         `This license number belongs to ${physicianRow.fullName}. Check the name and number.`,
@@ -341,7 +351,7 @@ async function review(user, id, input, rule, { now = new Date(), meta = {} } = {
         throw notFound();
       }
 
-      if (row.status !== "PENDING_VERIFICATION") {
+      if (!(rule.from ?? ["PENDING_VERIFICATION"]).includes(row.status)) {
         throw new HttpError(
           409,
           "prescription_state",
@@ -384,6 +394,23 @@ export const verifyPrescription = (user, id, input, options) => {
     id,
     input,
     { to: "VERIFIED", verb: "verified", action: "PRESCRIPTION_VERIFIED", liveOnly: true },
+    options,
+  );
+};
+
+/** Withdraws a verified prescription (forgery, wrong quantity): it can no longer be dispensed. */
+export const revokePrescription = (user, id, input, options) => {
+  return review(
+    user,
+    id,
+    input,
+    {
+      to: "REJECTED",
+      from: DISPENSABLE,
+      verb: "revoked",
+      action: "PRESCRIPTION_REVOKED",
+      reason: true,
+    },
     options,
   );
 };
@@ -493,6 +520,31 @@ export async function applyDispensing(tx, { prescription, items, saleId, wanted,
     status: "COMPLETED",
   });
 
+  const kinds = await tx
+    .select({
+      id: products.id,
+      classification: products.prescriptionClassification,
+      requiresPrescription: products.requiresPrescription,
+    })
+    .from(products)
+    .where(
+      inArray(
+        products.id,
+        items.map((item) => {
+          return item.productId;
+        }),
+      ),
+    );
+  // an over-the-counter product on the prescription never has to be dispensed for it to be complete
+  const needing = new Set(
+    kinds
+      .filter((kind) => {
+        return kind.classification !== "OTC" || kind.requiresPrescription;
+      })
+      .map((kind) => {
+        return kind.id;
+      }),
+  );
   const rows = [];
   let complete = true;
 
@@ -516,7 +568,7 @@ export async function applyDispensing(tx, { prescription, items, saleId, wanted,
         .where(eq(prescriptionItems.id, item.id));
     }
 
-    if (cmp(total, item.prescribedQuantity) < 0) {
+    if (needing.has(item.productId) && cmp(total, item.prescribedQuantity) < 0) {
       complete = false;
     }
   }
@@ -598,6 +650,8 @@ export async function getPrescription(user, id, { now = new Date() } = {}) {
       dosageInstructions: prescriptionItems.dosageInstructions,
       frequency: prescriptionItems.frequency,
       duration: prescriptionItems.duration,
+      classification: products.prescriptionClassification,
+      requiresPrescription: products.requiresPrescription,
     })
     .from(prescriptionItems)
     .innerJoin(products, eq(products.id, prescriptionItems.productId))
@@ -629,6 +683,7 @@ export async function getPrescription(user, id, { now = new Date() } = {}) {
         dosageInstructions: item.dosageInstructions,
         frequency: item.frequency,
         duration: item.duration,
+        needsPrescription: item.classification !== "OTC" || item.requiresPrescription,
       };
     }),
     sales: linked,
@@ -651,6 +706,13 @@ export async function listPrescriptions(user, { status, q, page = 1, now = new D
     conditions.push(sql`${prescriptions.validUntil} < ${today}`);
   } else if (PRESCRIPTION_STATUSES.includes(status)) {
     conditions.push(eq(prescriptions.status, status));
+
+    // an open prescription past its date is listed as expired, not under its stored status
+    if (OPEN.includes(status)) {
+      conditions.push(
+        sql`(${prescriptions.validUntil} IS NULL OR ${prescriptions.validUntil} >= ${today})`,
+      );
+    }
   }
 
   if (typeof q === "string" && q.trim() !== "") {
@@ -713,7 +775,7 @@ export async function lookupDispensable(user, number, { now = new Date() } = {})
     customerName: view.customerName ?? "No customer on file",
     items: items
       .filter((item) => {
-        return cmp(item.remainingQuantity, "0") > 0;
+        return item.needsPrescription && cmp(item.remainingQuantity, "0") > 0;
       })
       .map((item) => {
         return {

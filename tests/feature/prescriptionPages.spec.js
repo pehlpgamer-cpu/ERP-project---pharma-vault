@@ -157,6 +157,9 @@ test.group("prescription pages", (group) => {
     expect((await lookup(ctx.cashier, "")).status).toBe(422);
     expect((await lookup(ctx.accountant, prescriptionNumber)).status).toBe(403);
     expect((await ctx.cashier.get(`/prescriptions/${id}`, HTML)).text).toContain("Verified");
+    expect((await ctx.pharmacist.get(`/prescriptions/${id}`, HTML)).text).toContain("/revoke");
+    expect((await ctx.cashier.get(`/prescriptions/${id}`, HTML)).text).not.toContain("/revoke");
+    expect((await ctx.cashier.post(`/prescriptions/${id}/revoke`, HTML)).status).toBe(403);
   });
 
   test("a rejection needs a reason and is flashed back, not a 500", async ({ expect }) => {
