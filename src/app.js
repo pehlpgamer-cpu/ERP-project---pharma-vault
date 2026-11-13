@@ -39,6 +39,7 @@ app.use(
     extended: true,
     // a receipt form posts about 7 fields for each of up to 200 rows
     parameterLimit: 10000,
+    limit: "1mb",
   }),
 );
 
@@ -50,8 +51,12 @@ app.use(session(sessionOptions()));
 app.use(flash());
 
 app.use((req, res, next) => {
-  res.locals.success_msg = req.flash("success_msg");
-  res.locals.error_msg = req.flash("error_msg");
+  // Reading a flash creates the session, so only read when there is one with something in it:
+  // an anonymous request (a health check, the login page) must not be given a session and a cookie.
+  const pending = Boolean(req.session?.flash);
+
+  res.locals.success_msg = pending ? req.flash("success_msg") : [];
+  res.locals.error_msg = pending ? req.flash("error_msg") : [];
 
   next();
 });

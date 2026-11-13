@@ -158,13 +158,19 @@ export async function releaseBatch(user, batchId, input, options) {
     (batch) => {
       needs(batch, ["QUARANTINED"], "released");
 
-      return { action: "BATCH_RELEASED", set: { status: "ACTIVE" } };
+      // a batch with nothing left goes back to depleted, never to ACTIVE
+      const status = cmp(batch.quantityAvailable, "0") > 0 ? "ACTIVE" : "DEPLETED";
+
+      return { action: "BATCH_RELEASED", set: { status } };
     },
     options,
   );
 }
 
-/** ACTIVE or QUARANTINED → RECALLED, which is final. Stock stays on the books until written off. */
+/**
+ * ACTIVE, QUARANTINED or DEPLETED → RECALLED, which is final. A sold-out lot can still be recalled: units
+ * that come back from customers or arrive from a transfer must never make it sellable again.
+ */
 export async function recallBatch(user, batchId, input, options) {
   const text = cleanReason(input?.reason);
 
@@ -173,7 +179,7 @@ export async function recallBatch(user, batchId, input, options) {
     batchId,
     text,
     (batch) => {
-      needs(batch, ["ACTIVE", "QUARANTINED"], "recalled");
+      needs(batch, ["ACTIVE", "QUARANTINED", "DEPLETED"], "recalled");
 
       return { action: "BATCH_RECALLED", set: { status: "RECALLED" } };
     },

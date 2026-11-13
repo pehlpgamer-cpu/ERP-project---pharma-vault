@@ -12,6 +12,7 @@ import { sales } from "../../app/models/sales.js";
 import { salesReturnItems } from "../../app/models/sales-return-items.js";
 import { salesReturns } from "../../app/models/sales-returns.js";
 import { ROLE_PERMISSIONS } from "../../app/services/auth/permissions.js";
+import { recallBatch } from "../../app/services/inventory/batchActions.js";
 import {
   approveReturn,
   cancelReturn,
@@ -385,6 +386,14 @@ test.group("sales returns", (group) => {
         .sort(),
     ).toEqual(["CASH:60.00", "GCASH:40.00"]);
     expect(cash.amount).toBe("60.00");
+
+    const detail = await getReturn(ctx.manager, id);
+
+    expect(
+      detail.refunds.map((part) => {
+        return `${part.method}:${part.amount}:${part.referenceNumber ?? ""}`;
+      }),
+    ).toEqual(["CASH:60.00:", "GCASH:40.00:R-1"]);
     expect(await saleStatus(ctx)).toBe("REFUNDED");
   });
 
@@ -556,5 +565,20 @@ test.group("sales returns", (group) => {
       remaining: "4.000",
     });
     expect((await failure(getReturnableSale(ctx.stranger, ctx.sale.id))).status).toBe(404);
+  });
+
+  test("a sold-out lot that is recalled cannot be restocked by a return", async ({ expect }) => {
+    const ctx = await setup();
+
+    await db
+      .update(inventoryBatches)
+      .set({ status: "DEPLETED", quantityAvailable: "0.000" })
+      .where(eq(inventoryBatches.id, ctx.batch.id));
+    await recallBatch(ctx.manager, ctx.batch.id, { reason: "Manufacturer recall" }, { now: NOW });
+
+    const error = await failure(draft(ctx, "2"));
+
+    expect(error.details[0].path).toBe("lines.0.disposition");
+    expect((await draft(ctx, "2", "DISPOSE")).id).toBeDefined();
   });
 });

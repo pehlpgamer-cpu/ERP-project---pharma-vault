@@ -111,6 +111,7 @@ test.group("supplier return pages", (group) => {
     expect(refused.text).toContain('value="501"');
     expect(list.text).toContain("PRT-");
     expect(page.text).toContain("100.00");
+    expect(page.text).toContain("2.0000");
     expect(page.text).toContain("Submit for approval");
     expect((await ctx.clerk.get("/purchase-returns?page=99999999999999999999", HTML)).status).toBe(
       200,

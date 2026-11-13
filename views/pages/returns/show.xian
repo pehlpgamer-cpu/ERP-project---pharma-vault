@@ -1,5 +1,5 @@
 {{!--
-  returns/show: one return with its lines and next steps. Required: salesReturn, lines, refund (or null),
+  returns/show: one return with its lines and next steps. Required: salesReturn, lines, refunds (a list, empty until processed),
   refundRows, dispositionLabels, canSubmit, canApprove, needsOtherApprover, canReject, canProcess, canCancel.
 --}}
 <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
@@ -15,7 +15,7 @@
   <div><span class="block text-gray-500">Started by</span>{{salesReturn.createdByName}}</div>
   <div><span class="block text-gray-500">Approved by</span>{{#if salesReturn.approvedByName}}{{salesReturn.approvedByName}}{{else}}-{{/if}}</div>
   <div><span class="block text-gray-500">Created</span>{{formatDateTime salesReturn.createdAt}}</div>
-  <div><span class="block text-gray-500">Refunded</span>{{#if refund}}{{paymentMethod refund.method}}{{#if refund.referenceNumber}} &middot; {{refund.referenceNumber}}{{/if}}{{else}}-{{/if}}</div>
+  <div><span class="block text-gray-500">Refunded</span>{{#each refunds}}<span class="block">{{paymentMethod method}} {{currency amount}}{{#if referenceNumber}} &middot; {{referenceNumber}}{{/if}}</span>{{else}}-{{/each}}</div>
   <div class="sm:col-span-2 lg:col-span-4"><span class="block text-gray-500">Reason</span>{{salesReturn.reason}}</div>
 </section>
 

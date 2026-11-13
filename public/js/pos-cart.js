@@ -376,3 +376,17 @@ export function prescriptionShortage(details, lines) {
     })
     .join("\n");
 }
+
+/** The reasons a 422 gave, one per line: [{ path, message }] -> text. Empty when there are none. */
+export function validationMessage(details) {
+  if (!Array.isArray(details)) {
+    return "";
+  }
+
+  return details
+    .map((detail) => {
+      return detail?.message;
+    })
+    .filter(Boolean)
+    .join("\n");
+}

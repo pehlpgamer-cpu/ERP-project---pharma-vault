@@ -210,14 +210,14 @@ export default {
   },
 
   show: async (req, res) => {
-    const { salesReturn, lines, refund, refundable } = await getReturn(req.user, req.params.id);
+    const { salesReturn, lines, refunds, refundable } = await getReturn(req.user, req.params.id);
 
     return res.render("returns/show", {
       pageTitle: salesReturn.returnNumber,
       layout: "authenticated",
       salesReturn,
       lines,
-      refund,
+      refunds,
       refundRows: refundRows(refundable, salesReturn.refundAmount),
       dispositionLabels: DISPOSITION_LABELS,
       ...flagsFor(req.user, salesReturn),

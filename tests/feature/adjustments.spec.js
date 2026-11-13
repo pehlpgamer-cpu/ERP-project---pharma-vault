@@ -340,4 +340,30 @@ test.group("stock adjustments", (group) => {
         .sort(),
     ).toEqual(["LOT-A", "LOT-B"]);
   });
+
+  test("counting a quarantined batch to zero leaves it quarantined", async ({ expect }) => {
+    const ctx = await setup();
+
+    await db
+      .update(inventoryBatches)
+      .set({ status: "QUARANTINED" })
+      .where(eq(inventoryBatches.id, ctx.b.id));
+
+    const { id } = await createAdjustment(
+      ctx.clerk,
+      { reason: "Nothing left", lines: [{ inventoryBatchId: ctx.b.id, countedQuantity: "0" }] },
+      { now: NOW },
+    );
+
+    await submitAdjustment(ctx.clerk, id, {}, { now: NOW });
+    await approveAdjustment(ctx.manager, id, {}, { now: NOW });
+    await postAdjustment(ctx.manager, id, {}, { now: NOW });
+
+    const [batch] = await db
+      .select()
+      .from(inventoryBatches)
+      .where(eq(inventoryBatches.id, ctx.b.id));
+
+    expect(batch).toMatchObject({ status: "QUARANTINED", quantityAvailable: "0.000" });
+  });
 });

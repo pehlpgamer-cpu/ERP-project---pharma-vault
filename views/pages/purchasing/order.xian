@@ -37,7 +37,7 @@
         <td class="cell">{{unitName}} <span class="text-gray-500">({{formatNumber conversionFactor}} base)</span></td>
         <td class="cell text-right">{{formatNumber quantityOrdered}}</td>
         <td class="cell text-right">{{formatNumber quantityReceived}}</td>
-        <td class="cell text-right">{{currency unitCost}}</td>
+        <td class="cell text-right">{{currency unitCost 4}}</td>
         <td class="cell text-right">{{currency lineTotal}}</td>
       </tr>
       {{/each}}

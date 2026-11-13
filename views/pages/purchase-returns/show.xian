@@ -38,7 +38,7 @@
         <td class="cell">{{batchNumber}} {{badge batchStatus}}</td>
         <td class="cell text-right">{{formatNumber quantity}}</td>
         <td class="cell text-right">{{formatNumber availableNow}}{{#if short}} <span class="block text-xs text-red-700">not enough</span>{{/if}}</td>
-        <td class="cell text-right">{{currency unitCost}}</td>
+        <td class="cell text-right">{{currency unitCost 4}}</td>
         <td class="cell text-right">{{currency value}}</td>
       </tr>
       {{/each}}

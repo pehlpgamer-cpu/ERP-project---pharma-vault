@@ -9,6 +9,7 @@ import {
   normalizeAmount,
   normalizeQuantity,
   prescriptionShortage,
+  validationMessage,
   removeLine,
   restoreAttempt,
   restoreCart,
@@ -379,5 +380,16 @@ test.group("sale attempts (a lost answer must never become a second sale)", () =
       "Amoxicillin: 40 requested, 30 left on the prescription\nA product: 2 requested, none left on the prescription",
     );
     expect(prescriptionShortage([], lines)).toBe("");
+  });
+
+  test("validationMessage joins the reasons the server gave", ({ expect }) => {
+    expect(
+      validationMessage([
+        { path: "items", message: "A sale can have at most 50 lines" },
+        { path: "payments.0.amount", message: "amount must be more than zero" },
+      ]),
+    ).toBe("A sale can have at most 50 lines\namount must be more than zero");
+    expect(validationMessage([])).toBe("");
+    expect(validationMessage(undefined)).toBe("");
   });
 });

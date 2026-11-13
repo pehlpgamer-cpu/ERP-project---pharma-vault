@@ -11,6 +11,7 @@ import {
   emptyCart,
   normalizeAmount,
   prescriptionShortage,
+  validationMessage,
   removeLine,
   restoreAttempt,
   restoreCart,
@@ -690,6 +691,14 @@ function failureMessage(error, status) {
   if (error?.code === "prescription_quantity" && Array.isArray(error.details)) {
     return `The prescription does not cover that quantity.
 ${prescriptionShortage(error.details, cart.lines)}`;
+  }
+
+  if (error?.code === "validation_failed") {
+    const reasons = validationMessage(error.details);
+
+    if (reasons !== "") {
+      return reasons;
+    }
   }
 
   return error?.message ?? `The sale could not be saved (error ${status}).`;

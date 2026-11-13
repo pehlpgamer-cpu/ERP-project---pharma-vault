@@ -3,6 +3,7 @@ import and from "../../views/helpers/and.js";
 import badge from "../../views/helpers/badge.js";
 import can from "../../views/helpers/can.js";
 import concat from "../../views/helpers/concat.js";
+import currency from "../../views/helpers/currency.js";
 import eq from "../../views/helpers/eq.js";
 import formatDate from "../../views/helpers/formatDate.js";
 import formatDateTime from "../../views/helpers/formatDateTime.js";
@@ -119,5 +120,11 @@ test.group("badge", () => {
     expect(badge("PARTIALLY_REFUNDED").toHTML()).toContain("Partially refunded");
     expect(badge("FAILED").toHTML()).toContain("bg-red-100");
     expect(badge("SOMETHING_ELSE").toHTML()).toContain("bg-gray-100");
+  });
+
+  test("currency can keep more decimals for unit costs", ({ expect }) => {
+    expect(currency("2", 4)).toBe("₱2.0000");
+    expect(currency("0.125", 4)).toBe("₱0.1250");
+    expect(currency("2")).toBe("₱2.00");
   });
 });

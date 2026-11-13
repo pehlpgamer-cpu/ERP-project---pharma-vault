@@ -105,6 +105,10 @@
     const receipt = document.getElementById('receipt');
     const button = document.querySelector('[data-print]');
     if (button) button.addEventListener('click', () => window.print());
-    if (receipt && receipt.dataset.autoPrint === 'true') window.print();
+    if (receipt && receipt.dataset.autoPrint === 'true') {
+      // print once: drop ?print=1 so a reload or Back does not reopen the dialog
+      history.replaceState(null, '', location.pathname);
+      window.print();
+    }
   })();
 </script>

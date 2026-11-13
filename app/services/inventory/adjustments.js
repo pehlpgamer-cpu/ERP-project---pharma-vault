@@ -450,7 +450,9 @@ async function postOnce(user, id, { now = new Date(), meta = {} }) {
           .update(inventoryBatches)
           .set({
             quantityAvailable: counted,
-            status: cmp(counted, "0") === 0 ? "DEPLETED" : batch.status,
+            // only a batch that was on sale becomes depleted; a quarantined one stays quarantined
+            status:
+              cmp(counted, "0") === 0 && batch.status === "ACTIVE" ? "DEPLETED" : batch.status,
           })
           .where(eq(inventoryBatches.id, batch.id));
         await tx.insert(inventoryMovements).values({

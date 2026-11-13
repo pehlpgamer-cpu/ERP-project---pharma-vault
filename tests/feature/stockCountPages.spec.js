@@ -95,6 +95,8 @@ test.group("stock count pages", (group) => {
     expect(blank.text).toContain("LOT-A");
     // every signed-in page locks a form after its first submit, so a double click saves once
     expect(blank.text).toContain("dataset.submitting");
+    // signing out clears the POS cart kept in the browser, so the next cashier starts clean
+    expect(blank.text).toContain("pos-attempt");
     expect(refused.status).toBe(422);
     expect(refused.text).toContain("Cannot exceed");
     expect(refused.text).not.toContain(XSS);

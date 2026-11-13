@@ -8,6 +8,12 @@ const HEADINGS = {
   500: "Something went wrong",
 };
 
+const CLIENT_MESSAGES = {
+  400: "The request was malformed",
+  413: "The request is too large",
+  415: "That content type or character set is not supported",
+};
+
 /** Closes the route stack: anything that reaches it matched no route. */
 export function notFound(req, res, next) {
   next(new HttpError(404, "not_found", "Not found"));
@@ -21,6 +27,17 @@ function toHttpError(error) {
 
   if (error?.type === "entity.parse.failed") {
     return new ValidationError([{ path: "body", message: "Malformed JSON" }]);
+  }
+
+  // body-parser and the router tag what the client did wrong (400, 413, 415, ...) with a status
+  const status = error?.status ?? error?.statusCode;
+
+  if (Number.isInteger(status) && status >= 400 && status < 500) {
+    return new HttpError(
+      status,
+      "bad_request",
+      CLIENT_MESSAGES[status] ?? "The request could not be processed",
+    );
   }
 
   return null;

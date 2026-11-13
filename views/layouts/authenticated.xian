@@ -57,6 +57,16 @@
           });
         }, 0);
       });
+      // the next person to sign in on this browser must not inherit a cart, a pending sale or a prescription
+      document.addEventListener('submit', (event) => {
+        const form = event.target;
+        if (!(form instanceof HTMLFormElement) || form.getAttribute('action') !== '/logout') return;
+        try {
+          ['pos-cart', 'pos-attempt', 'pos-rx'].forEach((key) => sessionStorage.removeItem(key));
+        } catch (error) {
+          // storage unavailable: nothing to clear
+        }
+      });
       window.addEventListener('pageshow', (event) => {
         if (!event.persisted) return;
         document.querySelectorAll('form[data-submitting]').forEach((form) => {

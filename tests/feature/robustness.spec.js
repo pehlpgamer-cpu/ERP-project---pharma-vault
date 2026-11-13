@@ -2,7 +2,7 @@ import { test } from "@japa/runner";
 import { ROLE_PERMISSIONS } from "../../app/services/auth/permissions.js";
 import { resetDatabase } from "../helpers/db.js";
 import { makeUser, makeWorld } from "../helpers/factories.js";
-import { loginAs } from "../helpers/http.js";
+import { loginAs, TestSession } from "../helpers/http.js";
 
 const PAGES = [
   "/sales",
@@ -220,4 +220,28 @@ test("create endpoints survive hostile bodies", async ({ expect }) => {
   }
 
   expect(crashes).toEqual([]);
+});
+
+test("client errors from the parsers are 4xx, not 500", async ({ expect }) => {
+  const session = new TestSession();
+  const html = { accept: "text/html" };
+  const badPath = await session.get("/sales/%E0%A4%A", { headers: html });
+  const tooBig = await session.post("/login", {
+    headers: html,
+    form: { email: "a@b.c", password: "x".repeat(2_000_000) },
+  });
+  const charset = await session.request("POST", "/login", {
+    headers: { ...html, "content-type": "application/x-www-form-urlencoded; charset=latin1" },
+    body: "email=a",
+  });
+
+  expect([badPath.status, tooBig.status, charset.status]).toEqual([400, 413, 415]);
+});
+
+test("anonymous requests do not start sessions", async ({ expect }) => {
+  for (const path of ["/api/v1/up", "/login-page", "/"]) {
+    const response = await new TestSession().get(path, { headers: { accept: "text/html" } });
+
+    expect([path, response.headers.get("set-cookie")]).toEqual([path, null]);
+  }
 });

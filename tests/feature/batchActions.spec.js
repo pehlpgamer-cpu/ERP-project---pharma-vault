@@ -160,6 +160,8 @@ test.group("quarantine, release and recall", (group) => {
       ],
     });
     const [quarantined, recalled, depleted] = other.batches;
+
+    // a sold-out lot can be recalled (it must not return to sale), but written off it holds nothing
     const before = await totals();
     const refused = [
       () => {
@@ -176,9 +178,6 @@ test.group("quarantine, release and recall", (group) => {
       },
       () => {
         return recallBatch(ctx.manager, recalled.id, { reason: "x" });
-      },
-      () => {
-        return recallBatch(ctx.manager, depleted.id, { reason: "x" });
       },
       () => {
         return writeOffBatch(ctx.manager, recalled.id, { reason: "x", kind: "damaged" });
@@ -376,5 +375,31 @@ test.group("reasons, kinds and scope", (group) => {
 
       expect([id, error instanceof HttpError, error?.status]).toEqual([id, true, 404]);
     }
+  });
+
+  test("a sold-out batch can still be recalled", async ({ expect }) => {
+    const ctx = await setup();
+
+    await db
+      .update(inventoryBatches)
+      .set({ status: "DEPLETED", quantityAvailable: "0.000" })
+      .where(eq(inventoryBatches.id, ctx.batch.id));
+    await recallBatch(ctx.manager, ctx.batch.id, { reason: "Manufacturer recall" }, { now: NOW });
+
+    expect((await row(ctx.batch.id)).status).toBe("RECALLED");
+  });
+
+  test("releasing a quarantined batch that holds nothing leaves it depleted, not on sale", async ({
+    expect,
+  }) => {
+    const ctx = await setup();
+
+    await db
+      .update(inventoryBatches)
+      .set({ status: "QUARANTINED", quantityAvailable: "0.000" })
+      .where(eq(inventoryBatches.id, ctx.batch.id));
+    await releaseBatch(ctx.manager, ctx.batch.id, { reason: "Cleared" }, { now: NOW });
+
+    expect((await row(ctx.batch.id)).status).toBe("DEPLETED");
   });
 });

@@ -988,7 +988,7 @@ export async function getReturn(user, id) {
       asc(inventoryBatches.batchNumber),
       asc(salesReturnItems.id),
     );
-  const [refund] = await db
+  const parts = await db
     .select({
       method: refunds.paymentMethod,
       amount: refunds.amount,
@@ -997,7 +997,7 @@ export async function getReturn(user, id) {
     })
     .from(refunds)
     .where(eq(refunds.salesReturnId, id))
-    .limit(1);
+    .orderBy(asc(refunds.paymentMethod), asc(refunds.id));
 
   const [sale] = await db.select().from(sales).where(eq(sales.id, salesReturn.saleId));
   const left = await refundableByMethod(db, sale);
@@ -1019,7 +1019,9 @@ export async function getReturn(user, id) {
         refundAmount: toScale(line.refundAmount, 2),
       };
     }),
-    refund: refund ?? null,
+    refunds: parts.map((part) => {
+      return { ...part, amount: toScale(part.amount, 2) };
+    }),
   };
 }
 
