@@ -39,7 +39,7 @@
 <section class="border border-gray-200 bg-white">
   <div class="flex items-center justify-between border-b border-gray-200 p-4">
     <h2 class="text-base font-semibold">Latest sales</h2>
-    <a href="/sales" class="text-sm text-red-700 underline">View all sales</a>
+    <a href="/sales" class="text-sm text-blue-700 underline">View all sales</a>
   </div>
   {{#if recentSales.length}}
   <div class="overflow-x-auto">
@@ -56,7 +56,7 @@
       <tbody>
         {{#each recentSales}}
         <tr class="border-t border-gray-200">
-          <td class="cell"><a href="/sales/{{id}}" class="font-medium text-red-700 underline">{{invoiceNumber}}</a></td>
+          <td class="cell"><a href="/sales/{{id}}" class="font-medium text-blue-700 underline">{{invoiceNumber}}</a></td>
           <td class="cell whitespace-nowrap">{{formatDateTime transactionDate}}</td>
           <td class="cell">{{cashier.name}}</td>
           <td class="cell text-right font-medium">{{currency totals.total}}</td>

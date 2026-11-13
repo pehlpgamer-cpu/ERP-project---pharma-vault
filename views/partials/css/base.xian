@@ -1,20 +1,80 @@
-{{!-- css/base: styles shared by every layout. Included inside a <style type="text/tailwindcss"> block. --}}
+{{!-- css/base: styles shared by every layout. Included inside a <style type="text/tailwindcss"> block. Design language: a calm blue brand (blue-600 actions, navy shell) on cool slate neutrals; red stays reserved for errors and destructive actions. --}}
+body {
+    background: #f4f7fb;
+    color: #0f172a;
+    -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+    background: #bfdbfe;
+}
+
+/* One visible, consistent keyboard focus ring everywhere. */
+:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+}
+
+/* Brand gradient for hero strips on the public pages. */
 .bg-default {
-    background: linear-gradient(90deg, #f7a2a2 0%, #fcbe96 50%, #fee9af 100%);
+    background: linear-gradient(120deg, #1e3a8a 0%, #2563eb 60%, #3b82f6 100%);
 }
 
 /* Inside the components layer so utilities can still override it (class="btn bg-gray-200"). */
 @layer components {
     .btn {
-        @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded bg-red-300 p-2 duration-150 hover:scale-105 hover:bg-black hover:text-white;
+        @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-blue-600 px-3.5 py-2 text-sm font-medium text-white shadow-sm transition-colors duration-150 hover:bg-blue-700 active:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50;
     }
 
     /* table cell padding and the look of a form control, shared by the list and form pages */
     .cell {
-        @apply px-3 py-2;
+        @apply px-3 py-2.5;
     }
 
     .field {
-        @apply mt-1 w-full rounded border border-gray-300 bg-white p-2 text-sm;
+        @apply mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200;
     }
+}
+
+/* Secondary buttons are written as class="btn bg-gray-200": give them a soft blue tint and dark text. */
+.btn.bg-gray-200 {
+    background: #e8f0fe;
+    color: #1e3a8a;
+    box-shadow: none;
+}
+.btn.bg-gray-200:hover {
+    background: #d3e3fd;
+}
+
+/* Cards: the white bordered boxes the pages are built from. */
+.border.border-gray-200.bg-white {
+    border-color: #dbe3ef;
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
+}
+
+[role="alert"] {
+    border-radius: 0.5rem;
+}
+
+/* Tables: quiet header, readable rows, a hover cue. */
+thead.bg-gray-50 {
+    background: #f1f5fb;
+}
+th.cell {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #475569;
+}
+tbody tr.border-t {
+    border-color: #e6ecf5;
+}
+tbody tr.border-t:hover {
+    background: #f6f9ff;
+}
+
+a.text-blue-700:hover {
+    color: #1e40af;
 }

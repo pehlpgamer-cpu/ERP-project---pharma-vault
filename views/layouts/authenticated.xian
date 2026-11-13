@@ -1,30 +1,34 @@
 {{!-- authenticated layout: the app shell for signed-in users. Needs currentUser and currentPath (set by the loadUser middleware). --}}
 {{>head}}
 
-<body class="bg-gray-50 text-gray-900">
+<body class="text-slate-900">
   <div class="flex min-h-screen">
-    <aside id="app-sidebar" class="fixed inset-y-0 left-0 z-30 hidden w-60 shrink-0 flex-col border-r border-gray-200 bg-white md:static md:flex">
-      <a href="/dashboard-page" class="bg-default flex items-center gap-2 border-b border-gray-200 px-4 py-3 text-xl font-bold">
-        <i class="bi bi-fire text-red-600" aria-hidden="true"></i>
-        XIANFIRE
+    <aside id="app-sidebar" class="fixed inset-y-0 left-0 z-30 hidden w-64 shrink-0 flex-col bg-blue-950 text-blue-100 shadow-xl md:sticky md:top-0 md:flex md:h-screen md:shadow-none">
+      <a href="/dashboard-page" class="flex items-center gap-3 px-5 py-5 text-lg font-semibold tracking-tight text-white">
+        <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 shadow-sm">
+          <i class="bi bi-capsule-pill" aria-hidden="true"></i>
+        </span>
+        Pharma Vault
       </a>
       {{>sideNavBar}}
     </aside>
     <div class="flex min-w-0 flex-1 flex-col">
-      <header id="app-header" class="flex items-center gap-3 border-b border-gray-200 bg-white px-4 py-2">
+      <header id="app-header" class="sticky top-0 z-20 flex items-center gap-3 border-b border-slate-200 bg-white/90 px-4 py-2.5 backdrop-blur md:px-6">
         <button type="button" id="nav-toggle" class="btn md:hidden" aria-label="Toggle navigation" aria-controls="app-sidebar">
           <i class="bi bi-list" aria-hidden="true"></i>
         </button>
         <div class="flex-1"></div>
         <div class="text-right text-sm leading-tight">
-          <p class="font-medium">{{currentUser.name}}</p>
+          <p class="font-semibold text-slate-800">{{currentUser.name}}</p>
           {{#if currentUser.branchName}}
-          <p class="text-gray-500">{{currentUser.branchName}}</p>
+          <p class="text-slate-500">{{currentUser.branchName}}</p>
           {{/if}}
         </div>
-        <i class="bi bi-person-circle text-2xl text-gray-500" aria-hidden="true"></i>
+        <span class="flex h-9 w-9 items-center justify-center rounded-full bg-blue-100 text-blue-700" aria-hidden="true">
+          <i class="bi bi-person-fill text-lg"></i>
+        </span>
       </header>
-      <main class="flex-1 p-4">
+      <main class="flex-1 p-4 md:p-6">
         {{{body}}}
       </main>
       <div id="app-footer">
@@ -47,8 +51,8 @@
   <style type="text/tailwindcss">
   {{>css/base}}
   @layer components {
-    .nav-link { @apply flex items-center gap-2 rounded px-3 py-2 text-sm text-gray-700 hover:bg-red-50 hover:text-red-700; }
-    .nav-link-active { @apply bg-red-100 font-semibold text-red-800; }
+    .nav-link { @apply flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-blue-100/80 transition-colors hover:bg-white/10 hover:text-white; }
+    .nav-link-active { @apply bg-blue-600 text-white shadow-sm hover:bg-blue-600; }
   }
   /* A printed receipt is the receipt only: no navigation, header or footer around it. */
   @media print {

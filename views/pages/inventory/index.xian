@@ -58,7 +58,7 @@
     <tbody>
       {{#each rows}}
       <tr class="border-t border-gray-200">
-        <td class="cell whitespace-nowrap"><a href="/inventory/batches?q={{sku}}{{#if ../branchId}}&amp;branchId={{../branchId}}{{/if}}" class="font-medium text-red-700 underline">{{sku}}</a></td>
+        <td class="cell whitespace-nowrap"><a href="/inventory/batches?q={{sku}}{{#if ../branchId}}&amp;branchId={{../branchId}}{{/if}}" class="font-medium text-blue-700 underline">{{sku}}</a></td>
         <td class="cell">{{productName}}</td>
         <td class="cell">{{#if baseUnitName}}{{baseUnitName}}{{else}}<span class="text-gray-400">None</span>{{/if}}</td>
         <td class="cell text-right">{{formatNumber onHand}}</td>

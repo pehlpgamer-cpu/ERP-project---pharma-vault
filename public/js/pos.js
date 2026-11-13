@@ -269,7 +269,7 @@ function resultItem(product) {
 
     return el("button", {
       className:
-        "btn text-sm disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100 disabled:hover:bg-red-300 disabled:hover:text-inherit",
+        "btn text-sm disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-blue-600",
       text: label,
       attrs: { type: "button", disabled: !state.ok, title: state.reason || `Add one ${unit.name}` },
       on: {

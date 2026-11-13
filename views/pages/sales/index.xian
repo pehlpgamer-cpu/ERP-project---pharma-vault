@@ -85,7 +85,7 @@
     <tbody>
       {{#each sales}}
       <tr class="border-t border-gray-200">
-        <td class="cell"><a href="/sales/{{id}}" class="font-medium text-red-700 underline">{{invoiceNumber}}</a></td>
+        <td class="cell"><a href="/sales/{{id}}" class="font-medium text-blue-700 underline">{{invoiceNumber}}</a></td>
         <td class="cell whitespace-nowrap">{{formatDateTime transactionDate}}</td>
         <td class="cell">{{cashier.name}}</td>
         <td class="cell">{{#if customer}}{{customer.name}}{{else}}<span class="text-gray-400">Walk-in</span>{{/if}}</td>

@@ -16,9 +16,9 @@
 {{/each}}
 <style type="text/tailwindcss">
   /* buttons for SweetAlert2 popups (used with buttonsStyling: false so Tailwind, not Swal's CSS, styles them) */
-  .swal-btn { @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 mx-1 font-medium cursor-pointer duration-150 hover:scale-105; }
-  .swal-btn-confirm { @apply bg-red-600 text-white hover:bg-black; }
-  .swal-btn-cancel { @apply bg-gray-200 text-gray-900 hover:bg-gray-300; }
+  .swal-btn { @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 mx-1 font-medium cursor-pointer transition-colors duration-150; }
+  .swal-btn-confirm { @apply bg-blue-600 text-white hover:bg-blue-700; }
+  .swal-btn-cancel { @apply bg-blue-50 text-blue-900 hover:bg-blue-100; }
 </style>
 <script>
   (() => {

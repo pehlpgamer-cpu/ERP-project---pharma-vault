@@ -23,7 +23,7 @@
       <dd class="pt-2 text-right">{{summary.salesCount}}</dd>
     </dl>
     <p class="mt-3 text-sm">
-      <a href="/pos-page" class="text-red-700 underline">Go to the sales screen</a>
+      <a href="/pos-page" class="text-blue-700 underline">Go to the sales screen</a>
     </p>
   </section>
 

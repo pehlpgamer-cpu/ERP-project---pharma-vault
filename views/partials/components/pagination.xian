@@ -33,9 +33,9 @@
 </nav>
 <style type="text/tailwindcss">
   @layer components {
-    .page-link { @apply inline-flex min-w-8 items-center justify-center rounded border border-gray-300 bg-white px-2 py-1 text-gray-700 hover:bg-gray-100; }
-    .page-link-current { @apply border-red-600 bg-red-600 text-white hover:bg-red-600; }
-    .page-link-disabled { @apply cursor-not-allowed text-gray-300 hover:bg-white; }
+    .page-link { @apply inline-flex min-w-8 items-center justify-center rounded-lg border border-slate-300 bg-white px-2 py-1 text-slate-700 transition-colors hover:bg-blue-50 hover:text-blue-700; }
+    .page-link-current { @apply border-blue-600 bg-blue-600 text-white hover:bg-blue-600 hover:text-white; }
+    .page-link-disabled { @apply cursor-not-allowed text-slate-300 hover:bg-white hover:text-slate-300; }
   }
 </style>
 {{/if}}

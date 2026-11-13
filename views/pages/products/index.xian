@@ -59,7 +59,7 @@
     <tbody>
       {{#each products}}
       <tr class="border-t border-gray-200">
-        <td class="cell whitespace-nowrap"><a href="/products/{{id}}/edit" class="font-medium text-red-700 underline">{{sku}}</a></td>
+        <td class="cell whitespace-nowrap"><a href="/products/{{id}}/edit" class="font-medium text-blue-700 underline">{{sku}}</a></td>
         <td class="cell">{{productName}}</td>
         <td class="cell">{{genericName}}</td>
         <td class="cell">{{#if categoryName}}{{categoryName}}{{else}}<span class="text-gray-400">None</span>{{/if}}</td>
@@ -68,7 +68,7 @@
         <td class="cell text-right">{{formatNumber reorderLevel}}</td>
         <td class="cell">{{#if isActive}}<span class="rounded bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">Active</span>{{else}}<span class="rounded bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">Inactive</span>{{/if}}</td>
         <td class="cell whitespace-nowrap text-right">
-          <a href="/products/{{id}}/edit" class="text-red-700 underline">Edit</a>
+          <a href="/products/{{id}}/edit" class="text-blue-700 underline">Edit</a>
           <form method="POST" action="/products/{{id}}/status" class="inline" {{#if isActive}}data-confirm="Deactivate this product? It disappears from the POS."{{/if}}>
             <input type="hidden" name="active" value="{{#if isActive}}0{{else}}1{{/if}}">
             <button type="submit" class="ml-2 cursor-pointer text-gray-700 underline">{{#if isActive}}Deactivate{{else}}Activate{{/if}}</button>
