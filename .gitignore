@@ -5,6 +5,10 @@ node_modules/
 .env
 !.env.*
 .env.test
+# real production settings and the database backups never go into git
+.env.production
+.env.local
+backups/
 
 # Logs
 *.log

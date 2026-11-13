@@ -33,6 +33,8 @@
     "dep:report": "npx dependency-cruiser --config --output-type err-html -f dependency-report.html app database routes tests config src",
     "dep:matrix": "npx dependency-cruiser -T html -f dependency-matrix.html app database routes tests config src",
     "db:push": "drizzle-kit push",
+    "db:schema": "node scripts/export-schema.mjs",
+    "db:bootstrap": "node database/seed/bootstrap.js",
     "db:push:test": "node --env-file=.env.test node_modules/drizzle-kit/bin.cjs push",
     "views:check": "node scripts/check-views.mjs",
     "db:seed": "node database/seed/index.js"

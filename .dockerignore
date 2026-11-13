@@ -46,3 +46,9 @@ Thumbs.db
 
 # Unrelated application components
 electron/
+# Local tooling, planning notes and database backups never belong in the image
+.claude/
+.planning/
+.superpowers/
+backups/
+deploy/

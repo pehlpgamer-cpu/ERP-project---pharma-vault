@@ -46,7 +46,7 @@ cp .env.example .env        # then point MYSQL_HOST, MYSQL_PORT and the credenti
 Create the empty database once (the name must match `MYSQL_DATABASE`), then:
 
 ```bash
-npm run db:push             # creates the tables and views
+npm run db:push             # creates the tables and views (if it stops with a check-constraint conflict, load database/sql/schema.sql into the empty database instead)
 npm run db:seed             # demo data: two branches, a catalog, accounts and 30 days of sales
 npm start                   # http://localhost:3000
 ```
@@ -54,6 +54,14 @@ npm start                   # http://localhost:3000
 `npm run xian` runs the same server under nodemon. `db:seed` refuses to run in production or on a
 database that already has branches. It seeds everything through the application's own services, so
 the history it creates has the stock, cash ledger and invoice numbers the app itself would produce.
+
+### Production
+
+A Docker Compose stack for a VPS, published through a Cloudflare Tunnel (no open web ports), with a
+daily database backup, is in `compose.prod.yaml`. Setup, upgrades, backups and restore are in
+[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). `npm run db:bootstrap` creates the roles, permissions, a
+branch and the first admin on a real database (the demo seed refuses to run in production), and
+`npm run db:schema` regenerates `database/sql/schema.sql` after a model change.
 
 ### Demo accounts
 

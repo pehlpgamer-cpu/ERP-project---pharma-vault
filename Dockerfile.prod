@@ -1,13 +1,15 @@
-# Production
+# Production image for Pharma Vault. Built and run by compose.prod.yaml.
 FROM node:24-bookworm-slim
 
 WORKDIR /app
 
-ENV NODE_ENV=production
+ENV NODE_ENV=production \
+    NPM_CONFIG_UPDATE_NOTIFIER=false
 
 COPY package.json package-lock.json ./
 
-RUN npm ci --omit=dev
+# runtime dependencies only (no test, lint or desktop-packaging tools)
+RUN npm ci --omit=dev && npm cache clean --force
 
 COPY --chown=node:node . .
 
@@ -15,4 +17,5 @@ USER node
 
 EXPOSE 3000
 
-CMD ["node", "src/app.js"]
+# src/server.js builds the view engine before it listens; src/app.js alone never listens.
+CMD ["node", "src/server.js"]
