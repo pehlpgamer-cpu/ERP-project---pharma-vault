@@ -42,6 +42,7 @@
         <th class="cell text-right">Change</th>
         <th class="cell text-right">Before</th>
         <th class="cell text-right">After</th>
+        <th class="cell text-right">Unit cost</th>
         <th class="cell">By</th>
         <th class="cell">Source</th>
       </tr>
@@ -57,6 +58,7 @@
         <td class="cell text-right font-semibold">{{formatNumber quantityChange}}</td>
         <td class="cell text-right">{{formatNumber quantityBefore}}</td>
         <td class="cell text-right">{{formatNumber quantityAfter}}</td>
+        <td class="cell text-right">{{formatNumber unitCost}}</td>
         <td class="cell">{{#if performedByName}}{{performedByName}}{{else}}-{{/if}}</td>
         <td class="cell">
           {{#if link}}<a href="{{link}}" class="text-blue-700 underline">{{referenceType}}</a>{{else}}{{#if referenceType}}{{referenceType}}{{else}}-{{/if}}{{/if}}

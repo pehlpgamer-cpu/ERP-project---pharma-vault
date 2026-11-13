@@ -72,8 +72,7 @@ export async function listMovements(user, filters = {}) {
   }
 
   const where = conditions.length > 0 ? and(...conditions) : undefined;
-  const page =
-    Number.isSafeInteger(filters.page) && filters.page > 0 ? Math.min(filters.page, 100000) : 1;
+  const searching = typeof filters.q === "string" && filters.q.trim() !== "";
   const joined = (query) => {
     return query
       .from(inventoryMovements)
@@ -83,7 +82,18 @@ export async function listMovements(user, filters = {}) {
       .leftJoin(users, eq(users.id, inventoryMovements.performedBy))
       .where(where);
   };
-  const [{ n }] = await joined(db.select({ n: count() }));
+  // only a product or lot search needs the product and batch joins to count
+  const counting = db.select({ n: count() }).from(inventoryMovements);
+  const [{ n }] = await (
+    searching
+      ? counting
+          .innerJoin(products, eq(products.id, inventoryMovements.productId))
+          .innerJoin(inventoryBatches, eq(inventoryBatches.id, inventoryMovements.inventoryBatchId))
+      : counting
+  ).where(where);
+  const lastPage = Math.max(1, Math.ceil(n / PAGE_SIZE));
+  const page =
+    Number.isSafeInteger(filters.page) && filters.page > 0 ? Math.min(filters.page, lastPage) : 1;
   const rows = await joined(
     db.select({
       id: inventoryMovements.id,

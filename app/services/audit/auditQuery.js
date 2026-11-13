@@ -14,7 +14,8 @@ import { isUuid } from "../support/ids.js";
 import { isRealDay, startOfBusinessDay, startOfNextBusinessDay } from "../support/time.js";
 
 const PAGE_SIZE = 50;
-const SECRET_KEY = /password|secret|token|card|^pin$/i;
+const SECRET_KEY =
+  /pass(word|wd)?|pwd|secret|token|api.?key|authorization|cookie|otp|cvv|pin(code)?$|card(number|no)?$/i;
 
 /** A copy of `value` with every secret-looking key (at any depth) replaced by "[redacted]". */
 export function redact(value) {
@@ -54,6 +55,7 @@ export async function listAuditEvents(user, filters = {}) {
   }
 
   const conditions = [];
+  const hasUserFilter = typeof filters.q === "string" && filters.q.trim() !== "";
 
   if (isRealDay(filters.from)) {
     conditions.push(gte(auditLogs.createdAt, startOfBusinessDay(filters.from)));
@@ -84,13 +86,14 @@ export async function listAuditEvents(user, filters = {}) {
   }
 
   const where = conditions.length > 0 ? and(...conditions) : undefined;
+  // the user join is only needed to count when a user is searched for
+  const counting = db.select({ n: count() }).from(auditLogs);
+  const [{ n }] = await (
+    hasUserFilter ? counting.leftJoin(users, eq(users.id, auditLogs.userId)) : counting
+  ).where(where);
+  const lastPage = Math.max(1, Math.ceil(n / PAGE_SIZE));
   const page =
-    Number.isSafeInteger(filters.page) && filters.page > 0 ? Math.min(filters.page, 100000) : 1;
-  const [{ n }] = await db
-    .select({ n: count() })
-    .from(auditLogs)
-    .leftJoin(users, eq(users.id, auditLogs.userId))
-    .where(where);
+    Number.isSafeInteger(filters.page) && filters.page > 0 ? Math.min(filters.page, lastPage) : 1;
   const rows = await db
     .select({
       id: auditLogs.id,

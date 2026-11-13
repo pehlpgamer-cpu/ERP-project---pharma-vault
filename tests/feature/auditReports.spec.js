@@ -170,7 +170,49 @@ test.group("audit trail", (group) => {
       branchName: ctx.main.name,
     });
     expect(all.entityTypes).toEqual(["sale", "sales_return"]);
-    expect((await listAuditEvents(adminUser, { page: 99 })).rows).toHaveLength(0);
+    // a page past the end shows the last page
+    expect((await listAuditEvents(adminUser, { page: 99 })).page).toBe(1);
+  });
+
+  test("business-day boundaries, escaped action filters and paging use real rows", async ({
+    expect,
+  }) => {
+    const ctx = await setup();
+    const adminUser = await makeAuthUser({
+      branchId: ctx.main.id,
+      permissions: ROLE_PERMISSIONS.admin,
+    });
+
+    // 16:00Z is midnight in Manila: 15:59Z is still the 11th, 16:00Z is the 12th
+    await audit({ createdAt: new Date("2026-11-11T15:59:00Z"), action: "BEFORE_MIDNIGHT" });
+    await audit({ createdAt: new Date("2026-11-11T16:00:00Z"), action: "AFTER_MIDNIGHT" });
+    await audit({ action: "A_B" });
+    await audit({ action: "AXB" });
+
+    const on = async (day) => {
+      return (await listAuditEvents(adminUser, { from: day, to: day })).rows.map((row) => {
+        return row.action;
+      });
+    };
+
+    expect(await on("2026-11-11")).toEqual(["BEFORE_MIDNIGHT"]);
+    expect((await on("2026-11-12")).sort()).toEqual(["AFTER_MIDNIGHT", "AXB", "A_B"]);
+    // the underscore is a literal, not a wildcard
+    expect((await listAuditEvents(adminUser, { action: "A_" })).total).toBe(1);
+
+    for (let index = 0; index < 55; index++) {
+      await audit({ action: "BULK", createdAt: new Date(Date.UTC(2026, 10, 12, 4, 0, index)) });
+    }
+
+    const first = await listAuditEvents(adminUser, { action: "BULK" });
+    const second = await listAuditEvents(adminUser, { action: "BULK", page: 2 });
+    const beyond = await listAuditEvents(adminUser, { action: "BULK", page: 99999 });
+
+    expect(first.total).toBe(55);
+    expect(first.rows).toHaveLength(50);
+    expect(second.rows).toHaveLength(5);
+    expect(beyond.page).toBe(2);
+    expect(beyond.rows).toHaveLength(5);
   });
 
   test("the page links entities, redacts values and escapes everything", async ({ expect }) => {
@@ -267,6 +309,20 @@ test.group("stock movement ledger", (group) => {
       quantityAfter: "95.000",
       referenceId: saleId,
     });
+  });
+
+  test("a branch user cannot pick another branch through the page", async ({ expect }) => {
+    const ctx = await setup();
+
+    await movement(ctx.northStock.batches[0], ctx.north.id, ctx.northStock.product.id, {
+      performedBy: ctx.northClerk.id,
+    });
+
+    const clerk = await loginAs(ctx.clerk);
+    const page = await clerk.get(`/reports/movements?branchId=${ctx.north.id}`, HTML);
+
+    expect(page.status).toBe(200);
+    expect(page.text).not.toContain("CETI-2");
   });
 
   test("the page needs inventory.view, links the source and escapes the reason", async ({
