@@ -1,0 +1,79 @@
+{{!--
+  purchase-returns/show: one supplier return with its lines and next steps. Required: purchaseReturn, lines,
+  canSubmit, canApprove, needsOtherApprover, canReject, canPost, canCancel.
+--}}
+<div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+  {{> components/page-header title=purchaseReturn.returnNumber icon="box-arrow-up"}}
+  <a href="/purchase-returns" class="btn bg-gray-200"><i class="bi bi-list-ul" aria-hidden="true"></i> All returns</a>
+</div>
+
+<section class="mb-4 grid gap-3 border border-gray-200 bg-white p-4 text-sm sm:grid-cols-2 lg:grid-cols-4" aria-label="Return details">
+  <div><span class="block text-gray-500">Status</span>{{badge purchaseReturn.status}}</div>
+  <div><span class="block text-gray-500">Supplier</span>{{purchaseReturn.supplierName}}</div>
+  <div><span class="block text-gray-500">Branch</span>{{purchaseReturn.branchName}}</div>
+  <div><span class="block text-gray-500">Value</span>{{currency purchaseReturn.totalValue}}</div>
+  <div><span class="block text-gray-500">Started by</span>{{purchaseReturn.createdByName}}</div>
+  <div><span class="block text-gray-500">Created</span>{{formatDateTime purchaseReturn.createdAt}}</div>
+  <div><span class="block text-gray-500">Approved</span>{{#if purchaseReturn.approvedAt}}{{formatDateTime purchaseReturn.approvedAt}}{{else}}-{{/if}}</div>
+  <div><span class="block text-gray-500">Posted</span>{{#if purchaseReturn.postedAt}}{{formatDateTime purchaseReturn.postedAt}}{{else}}-{{/if}}</div>
+  <div class="sm:col-span-2 lg:col-span-4"><span class="block text-gray-500">Reason</span>{{purchaseReturn.reason}}</div>
+</section>
+
+<div class="mb-4 overflow-x-auto border border-gray-200 bg-white">
+  <table class="w-full text-left text-sm">
+    <thead class="bg-gray-50 text-gray-600">
+      <tr>
+        <th class="cell">Product</th>
+        <th class="cell">Batch</th>
+        <th class="cell text-right">Quantity</th>
+        <th class="cell text-right">Unit cost</th>
+        <th class="cell text-right">Value</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each lines}}
+      <tr class="border-t border-gray-200">
+        <td class="cell">{{productName}} <span class="text-gray-500">{{sku}}</span></td>
+        <td class="cell">{{batchNumber}} {{badge batchStatus}}</td>
+        <td class="cell text-right">{{formatNumber quantity}}</td>
+        <td class="cell text-right">{{currency unitCost}}</td>
+        <td class="cell text-right">{{currency value}}</td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+</div>
+
+{{#if needsOtherApprover}}
+<p class="mb-3 text-sm text-gray-600">You started this return, so someone else with approval rights must approve it.</p>
+{{/if}}
+
+<div class="flex flex-wrap items-start gap-3">
+  {{#if canSubmit}}
+  <form method="POST" action="/purchase-returns/{{purchaseReturn.id}}/submit"><button type="submit" class="btn">Submit for approval</button></form>
+  {{/if}}
+  {{#if canApprove}}
+  <form method="POST" action="/purchase-returns/{{purchaseReturn.id}}/approve"><button type="submit" class="btn">Approve</button></form>
+  {{/if}}
+  {{#if canReject}}
+  <details>
+    <summary class="btn cursor-pointer bg-gray-200">Reject</summary>
+    <form method="POST" action="/purchase-returns/{{purchaseReturn.id}}/reject" class="mt-1 flex flex-col gap-1">
+      <input type="text" name="reason" required maxlength="500" placeholder="Why it is rejected" aria-label="Reason" class="field">
+      <button type="submit" class="btn">Reject return</button>
+    </form>
+  </details>
+  {{/if}}
+  {{#if canPost}}
+  <form method="POST" action="/purchase-returns/{{purchaseReturn.id}}/post" data-confirm="Post this return? The stock leaves your batches now."><button type="submit" class="btn">Post return</button></form>
+  {{/if}}
+  {{#if canCancel}}
+  <details>
+    <summary class="cursor-pointer text-red-700 underline">Cancel return</summary>
+    <form method="POST" action="/purchase-returns/{{purchaseReturn.id}}/cancel" class="mt-1 flex flex-col gap-1" data-confirm="Cancel this return? This cannot be undone.">
+      <input type="text" name="reason" required maxlength="500" placeholder="Reason" aria-label="Reason" class="field">
+      <button type="submit" class="btn">Cancel return</button>
+    </form>
+  </details>
+  {{/if}}
+</div>

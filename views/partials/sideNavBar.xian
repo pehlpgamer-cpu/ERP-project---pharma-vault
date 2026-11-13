@@ -55,6 +55,9 @@
   <a href="/purchase-orders" class="nav-link {{#if (isActive currentPath "/purchase-orders")}}nav-link-active{{/if}}">
     <i class="bi bi-cart-check" aria-hidden="true"></i> Purchasing
   </a>
+  <a href="/purchase-returns" class="nav-link {{#if (isActive currentPath "/purchase-returns")}}nav-link-active{{/if}}">
+    <i class="bi bi-box-arrow-up" aria-hidden="true"></i> Supplier returns
+  </a>
   <a href="/suppliers" class="nav-link {{#if (isActive currentPath "/suppliers")}}nav-link-active{{/if}}">
     <i class="bi bi-truck" aria-hidden="true"></i> Suppliers
   </a>

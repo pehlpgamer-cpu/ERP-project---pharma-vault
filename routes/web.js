@@ -11,6 +11,7 @@ import reportController from "../app/http/controllers/reportController.js";
 import cashRegisterController from "../app/http/controllers/cashRegisterController.js";
 import dashboardController from "../app/http/controllers/dashboardController.js";
 import inventoryController from "../app/http/controllers/inventoryController.js";
+import purchaseReturnController from "../app/http/controllers/purchaseReturnController.js";
 import prescriptionController from "../app/http/controllers/prescriptionController.js";
 import posController from "../app/http/controllers/posController.js";
 import purchaseOrderController from "../app/http/controllers/purchaseOrderController.js";
@@ -244,6 +245,42 @@ for (const [path, guard, handler] of [
 const canViewPurchasing = requirePermission(PERMISSIONS.PURCHASING_VIEW);
 const canManagePurchasing = requirePermission(PERMISSIONS.PURCHASING_MANAGE);
 const canApprovePurchasing = requirePermission(PERMISSIONS.PURCHASING_APPROVE);
+
+// /purchase-returns/new is registered before /purchase-returns/:id so "new" is never read as an id.
+router.get(
+  "/purchase-returns",
+  requireAuth,
+  canViewPurchasing,
+  asyncHandler(purchaseReturnController.index),
+);
+router.get(
+  "/purchase-returns/new",
+  requireAuth,
+  canManagePurchasing,
+  asyncHandler(purchaseReturnController.newForm),
+);
+router.post(
+  "/purchase-returns",
+  requireAuth,
+  canManagePurchasing,
+  asyncHandler(purchaseReturnController.create),
+);
+router.get(
+  "/purchase-returns/:id",
+  requireAuth,
+  canViewPurchasing,
+  asyncHandler(purchaseReturnController.show),
+);
+
+for (const [path, guard, handler] of [
+  ["submit", canManagePurchasing, purchaseReturnController.submit],
+  ["cancel", canViewPurchasing, purchaseReturnController.cancel],
+  ["approve", canApprovePurchasing, purchaseReturnController.approve],
+  ["reject", canApprovePurchasing, purchaseReturnController.reject],
+  ["post", canApprovePurchasing, purchaseReturnController.post],
+]) {
+  router.post(`/purchase-returns/:id/${path}`, requireAuth, guard, asyncHandler(handler));
+}
 const canReceiveStock = requirePermission(PERMISSIONS.INVENTORY_RECEIVE);
 
 router.get("/suppliers", requireAuth, canViewPurchasing, asyncHandler(supplierController.index));
