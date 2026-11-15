@@ -8,7 +8,10 @@ import { productBarcodes } from "../../app/models/product-barcodes.js";
 import { productPrices } from "../../app/models/product-prices.js";
 import { productUnits } from "../../app/models/product-units.js";
 import { products } from "../../app/models/products.js";
+import { purchaseOrderItems } from "../../app/models/purchase-order-items.js";
+import { purchaseOrders } from "../../app/models/purchase-orders.js";
 import { saleItems } from "../../app/models/sale-items.js";
+import { suppliers } from "../../app/models/suppliers.js";
 import { ROLE_PERMISSIONS } from "../../app/services/auth/permissions.js";
 import { loadAuthUser } from "../../app/services/auth/users.js";
 import { loadEffectivePrices } from "../../app/services/catalog/pricing.js";
@@ -24,6 +27,7 @@ import { createSale } from "../../app/services/sales/checkout.js";
 import { resetDatabase } from "../helpers/db.js";
 import {
   makeAuthUser,
+  makeBranch,
   makeCategory,
   makeManufacturer,
   makeSale,
@@ -444,6 +448,49 @@ test.group("updateProduct", (group) => {
     expect(after.product.productName).toBe("Renamed");
     expect(after.product.units).toHaveLength(3);
     expect(after.hasHistory).toBe(true);
+  });
+
+  test("a product that only appears on a purchase order is locked too", async ({ expect }) => {
+    const ctx = await setup();
+    const { id, edit } = await twoUnits(ctx);
+    const branch = await makeBranch();
+    const supplierId = randomUUID();
+    const orderId = randomUUID();
+
+    await db.insert(suppliers).values({ id: supplierId, code: "SUP-PO", name: "Supplier" });
+    await db.insert(purchaseOrders).values({
+      id: orderId,
+      poNumber: "PO-LOCK-1",
+      branchId: branch.id,
+      supplierId,
+      status: "SENT",
+      createdBy: ctx.user.id,
+    });
+    await db.insert(purchaseOrderItems).values({
+      purchaseOrderId: orderId,
+      productId: id,
+      productUnitId: edit.product.units[1].id,
+      conversionFactor: "10.000",
+      quantityOrdered: "10",
+      unitCost: "30.0000",
+      lineTotal: "300.00",
+    });
+
+    // changing what a Strip is while an order for strips is open would change what it brings in
+    const error = await failure(
+      updateProduct(
+        ctx.user,
+        id,
+        asForm(ctx, edit, {
+          units: asForm(ctx, edit).units.map((unit, index) => {
+            return index === 1 ? { ...unit, conversionFactor: "5.000" } : unit;
+          }),
+        }),
+      ),
+    );
+
+    expect((await getProductForEdit(id)).hasHistory).toBe(true);
+    expect(error).toBeInstanceOf(ValidationError);
   });
 
   test("a product that only appears on a sale item is locked too", async ({ expect }) => {

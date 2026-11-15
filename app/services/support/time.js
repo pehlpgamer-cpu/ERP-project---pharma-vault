@@ -53,6 +53,29 @@ function offsetMinutesAt(zone, at) {
   return Math.round((localAsUtc - Math.floor(at.getTime() / 1000) * 1000) / 60_000);
 }
 
+/**
+ * Throws when APP_TIMEZONE is not a real IANA zone, or observes daylight saving time (one fixed offset
+ * is used, so business days would be wrong for part of the year). Called once at start-up.
+ */
+export function assertBusinessTimeZone() {
+  const zone = businessTimeZone();
+  let january;
+  let july;
+
+  try {
+    january = offsetMinutesAt(zone, new Date(Date.UTC(2026, 0, 15)));
+    july = offsetMinutesAt(zone, new Date(Date.UTC(2026, 6, 15)));
+  } catch {
+    throw new Error(`APP_TIMEZONE "${zone}" is not a valid time zone name, such as Asia/Manila`);
+  }
+
+  if (january !== july) {
+    throw new Error(
+      `APP_TIMEZONE "${zone}" observes daylight saving time, which is not supported: use a zone with a fixed offset`,
+    );
+  }
+}
+
 /** Minutes the business zone is ahead of UTC (480 for Asia/Manila), computed once. */
 export function businessOffsetMinutes() {
   cachedOffsetMinutes ??= offsetMinutesAt(businessTimeZone(), new Date());

@@ -575,8 +575,10 @@ export async function listPurchaseOrders(user, { status, supplierId, page = 1 } 
   }
 
   const where = conditions.length > 0 ? and(...conditions) : undefined;
-  const pageNumber = Number.isInteger(page) && page > 0 ? page : 1;
   const [{ n }] = await db.select({ n: count() }).from(purchaseOrders).where(where);
+  // an absurd page number shows the last page, never a huge offset the database refuses
+  const lastPage = Math.max(1, Math.ceil(n / PAGE_SIZE));
+  const pageNumber = Number.isSafeInteger(page) && page > 0 ? Math.min(page, lastPage) : 1;
   const rows = await db
     .select(headerSelect)
     .from(purchaseOrders)

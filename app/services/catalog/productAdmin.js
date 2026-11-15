@@ -13,6 +13,7 @@ import { productCategories } from "../../models/product-categories.js";
 import { productPrices } from "../../models/product-prices.js";
 import { productUnits } from "../../models/product-units.js";
 import { products } from "../../models/products.js";
+import { purchaseOrderItems } from "../../models/purchase-order-items.js";
 import { saleItems } from "../../models/sale-items.js";
 import { units } from "../../models/units.js";
 import { recordAudit } from "../audit/auditLog.js";
@@ -137,7 +138,19 @@ async function hasHistory(executor, productId) {
     .where(eq(saleItems.productId, productId))
     .limit(1);
 
-  return Boolean(item);
+  if (item) {
+    return true;
+  }
+
+  // an order line keeps the unit conversion factor from when it was written: changing the unit
+  // underneath it would change how much stock the delivery brings in
+  const [ordered] = await executor
+    .select({ id: purchaseOrderItems.id })
+    .from(purchaseOrderItems)
+    .where(eq(purchaseOrderItems.productId, productId))
+    .limit(1);
+
+  return Boolean(ordered);
 }
 
 // The product as the form shows it: its columns plus units with barcodes and the current global price.

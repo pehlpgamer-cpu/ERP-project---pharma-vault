@@ -80,7 +80,7 @@ export function orderListRequest(query) {
 
   return {
     status: str(query?.status),
-    page: Number.isInteger(page) && page > 0 ? page : 1,
+    page: Number.isSafeInteger(page) && page > 0 ? page : 1,
   };
 }
 
