@@ -1,6 +1,6 @@
 import * as z from "zod";
 import { wholeNumber, withoutEmptyValues } from "../fields.js";
-import { parse } from "../validate.js";
+import { parse } from "../../../services/support/validate.js";
 
 const STATUSES = ["PENDING", "COMPLETED", "PARTIALLY_REFUNDED", "REFUNDED", "VOIDED"];
 const PAYMENT_METHODS = ["CASH", "CARD", "GCASH", "MAYA", "BANK_TRANSFER", "OTHER"];

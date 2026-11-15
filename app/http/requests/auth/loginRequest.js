@@ -1,5 +1,5 @@
 import * as z from "zod";
-import { parse } from "../validate.js";
+import { parse } from "../../../services/support/validate.js";
 
 const Login = z.object({
   email: z.email().max(255),

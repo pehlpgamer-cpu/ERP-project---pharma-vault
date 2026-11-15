@@ -1,4 +1,4 @@
-import { ValidationError } from "../errors.js";
+import { ValidationError } from "../../http/errors.js";
 
 /**
  * Parses `input` with a zod schema. Returns the parsed data, or throws a ValidationError whose

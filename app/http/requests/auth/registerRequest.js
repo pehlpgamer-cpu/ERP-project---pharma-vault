@@ -1,5 +1,5 @@
 import * as z from "zod";
-import { parse } from "../validate.js";
+import { parse } from "../../../services/support/validate.js";
 
 const Register = z.object({
   name: z.string().trim().min(2).max(100),

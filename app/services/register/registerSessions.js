@@ -6,7 +6,7 @@ import { and, asc, desc, eq, inArray, notExists, sql } from "drizzle-orm";
 import * as z from "zod";
 import { db } from "../../../database/client.js";
 import { HttpError } from "../../http/errors.js";
-import { parse } from "../../http/requests/validate.js";
+import { parse } from "../support/validate.js";
 import { cashRegisterSessions } from "../../models/cash-register-sessions.js";
 import { cashRegisters } from "../../models/cash-registers.js";
 import { cashTransactions } from "../../models/cash-transactions.js";

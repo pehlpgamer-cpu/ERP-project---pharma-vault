@@ -1,7 +1,7 @@
 import * as z from "zod";
 import { cmp, toScale } from "../../../services/support/decimal.js";
 import { ValidationError } from "../../errors.js";
-import { parse } from "../validate.js";
+import { parse } from "../../../services/support/validate.js";
 
 const CLASSES = ["OTC", "PRESCRIPTION", "CONTROLLED", "OTHER"];
 const ALWAYS_PRESCRIBED = ["PRESCRIPTION", "CONTROLLED"];

@@ -2,7 +2,7 @@ import { test } from "@japa/runner";
 import * as z from "zod";
 import { HttpError, ValidationError } from "../../app/http/errors.js";
 import asyncHandler from "../../app/http/middleware/asyncHandler.js";
-import { parse } from "../../app/http/requests/validate.js";
+import { parse } from "../../app/services/support/validate.js";
 
 test.group("asyncHandler", () => {
   test("forwards a rejected promise to next", async ({ expect }) => {

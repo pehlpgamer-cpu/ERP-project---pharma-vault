@@ -1,6 +1,6 @@
 import * as z from "zod";
 import { cmp, isDecimal, toScale } from "../../../services/support/decimal.js";
-import { parse } from "../validate.js";
+import { parse } from "../../../services/support/validate.js";
 
 const PAYMENT_METHODS = ["CASH", "CARD", "GCASH", "MAYA", "BANK_TRANSFER", "OTHER"];
 const MAX_LINES = 50;

@@ -157,3 +157,4 @@ Test a restore on a spare machine before you need one.
 - One VPS, one database container: no high availability. Backups are your safety net.
 - Sessions are kept in memory (single app process); a restart signs users out.
 - Database upgrades are manual SQL (see Upgrading) until a migration runner is added.
+- `npm audit --omit=dev` reports one moderate advisory in `hbs` (the view-engine wrapper) with no upstream fix. It is a file-disclosure weakness that needs request data passed to `res.render` as options; no controller does that, and `tests/unit/renderSafety.spec.js` fails if one ever does. Re-run `npm audit` when upgrading.

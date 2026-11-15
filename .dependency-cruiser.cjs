@@ -2,6 +2,30 @@
 module.exports = {
   forbidden: [
     {
+      name: "models-are-leaves",
+      comment: "Table definitions depend on other table definitions and helpers, never on services or the HTTP layer.",
+      severity: "error",
+      from: { path: "^app/models" },
+      to: { path: "^(app/services|app/http|routes|src|views)" },
+    },
+    {
+      name: "services-not-http",
+      comment:
+        "Business logic must not reach into controllers, request shapers, resources or middleware (it may throw the shared errors in app/http/errors.js).",
+      severity: "error",
+      from: { path: "^app/services" },
+      to: {
+        path: "^app/http/(controllers|requests|resources|middleware|support)",
+      },
+    },
+    {
+      name: "controllers-not-models",
+      comment: "Controllers go through a service; only services and models talk to the database.",
+      severity: "warn",
+      from: { path: "^app/http/controllers" },
+      to: { path: "^(app/models|database/client)" },
+    },
+    {
       name: "no-circular",
       severity: "warn",
       comment:
@@ -363,42 +387,6 @@ module.exports = {
     },
   },
 
-  required: [
-    {
-      name: "model - sequelize Datatypes",
-      severity: "error",
-      module: {
-        path: "app/models",
-      },
-      to: {
-        path: "sequelize",
-        reachable: true,
-      },
-    },
-    {
-      name: "model - database/database.js",
-      comment: "to make sure migration & connection works",
-      severity: "error",
-      module: {
-        path: "app/models",
-      },
-      to: {
-        path: "database/database.js",
-        reachable: true,
-      },
-    },
-    {
-      name: "http/request - zod",
-      comment: "to make sure migration & connection works",
-      severity: "error",
-      module: {
-        path: "app/models",
-      },
-      to: {
-        path: "database/database.js",
-        reachable: true,
-      },
-    },
-  ],
+  required: [],
 };
 // generated: dependency-cruiser@17.4.3 on 2026-09-20T03:19:13.924Z

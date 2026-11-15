@@ -1,6 +1,6 @@
 import * as z from "zod";
 import { wholeNumber, withoutEmptyValues } from "../fields.js";
-import { parse } from "../validate.js";
+import { parse } from "../../../services/support/validate.js";
 
 const Query = z.object({
   q: z.string().max(100, "Search text must be at most 100 characters").optional(),
