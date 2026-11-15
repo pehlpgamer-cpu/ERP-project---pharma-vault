@@ -55,6 +55,8 @@ services:
       APP_TIMEZONE: ${APP_TIMEZONE:-Asia/Manila}
       EXPIRY_BUFFER_DAYS: ${EXPIRY_BUFFER_DAYS:-0}
       REGISTER_VARIANCE_THRESHOLD: ${REGISTER_VARIANCE_THRESHOLD:-50.00}
+      # empty = the integration endpoint is off
+      INTEGRATION_API_TOKEN: ${INTEGRATION_API_TOKEN:-}
       MYSQL_HOST: mysql
       MYSQL_PORT: 3306
       MYSQL_DATABASE: ${MYSQL_DATABASE:-pharma_vault}
