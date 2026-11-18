@@ -1,7 +1,11 @@
 # Pharma Vault on a single VPS, published through a Cloudflare Tunnel.
 #
-#   cloudflared ──► app ──► mysql          (+ backup: a daily mysqldump of mysql)
+#   cloudflared ─┬─► app ──► mysql          erp.example.com    (+ backup: a daily mysqldump of mysql)
+#                └─► queue                  queue.example.com  (the pharmacy queue's own stack)
 #
+# One tunnel serves both subdomains. The queue runs from its own repository (its compose.prod.yaml);
+# the two stacks meet on the Docker network `pharmacy-shared`, so create it once on the VPS:
+#   docker network create pharmacy-shared
 # Nothing is published on the host: the only way in from the internet is the tunnel, so the VPS needs
 # no open web ports (keep SSH). Setup and day-to-day commands: docs/DEPLOYMENT.md.
 #
@@ -64,6 +68,12 @@ services:
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     expose:
       - "3000"
+    networks:
+      default:
+      # the queue's medicine lookups reach the ERP here as http://pharma-vault:3000
+      shared:
+        aliases:
+          - pharma-vault
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/v1/up').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
       interval: 15s
@@ -84,6 +94,11 @@ services:
     command: tunnel --no-autoupdate run
     environment:
       TUNNEL_TOKEN: ${TUNNEL_TOKEN:?set TUNNEL_TOKEN in .env.production}
+    # Public hostnames (set in the Cloudflare dashboard): erp.<domain> → http://app:3000 and
+    # queue.<domain> → http://queue:3000. The queue is reached over the shared network.
+    networks:
+      - default
+      - shared
     depends_on:
       app:
         condition: service_healthy
@@ -104,6 +119,14 @@ services:
     volumes:
       - ./deploy/backup.sh:/backup.sh:ro
       - ./backups:/backups
+
+networks:
+  default:
+  # shared with the pharmacy queue's stack: `docker network create pharmacy-shared` (once per VPS).
+  # Only app and cloudflared join it; mysql and backup stay private to this stack.
+  shared:
+    name: pharmacy-shared
+    external: true
 
 volumes:
   mysql_data:

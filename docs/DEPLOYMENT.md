@@ -1,19 +1,29 @@
 # Deploying Pharma Vault on a VPS with Docker and a Cloudflare Tunnel
 
 ```
-internet ──HTTPS──► Cloudflare ──tunnel──► cloudflared ──► app (Node) ──► mysql
-                                                                └──────► backup (daily dump)
+                                                 ┌─► app (ERP, Node) ──► mysql      erp.example.com
+internet ──HTTPS──► Cloudflare ──tunnel──► cloudflared        └──────► backup (daily dump)
+                                                 └─► queue (pharmacy queue)         queue.example.com
 ```
 
-Everything runs in four containers from `compose.prod.yaml`. **No port is published on the VPS**: the
+The ERP runs in four containers from `compose.prod.yaml`. **No port is published on the VPS**: the
 only way in from the internet is the tunnel, which your VPS opens outward to Cloudflare. You need no
 open web ports, no certificates and no reverse proxy; Cloudflare terminates HTTPS for your domain.
 
+The same tunnel also publishes the pharmacy queue on a second subdomain. The queue lives in its own
+repository with its own `compose.prod.yaml`; the two stacks meet on a Docker network named
+`pharmacy-shared`, which lets this stack's cloudflared reach the queue and lets the queue look up
+medicines in the ERP without leaving the VPS. Deploy the ERP first, then follow the queue's
+`docs/DEPLOYMENT.md`.
+
 ## What you need
 
-- A VPS with Docker Engine and the Compose plugin (Ubuntu 22.04 or 24.04, 2 GB RAM is enough).
-- Your domain added to a (free) Cloudflare account, with its nameservers pointed at Cloudflare.
-- This repository on the VPS.
+- A VPS with Docker Engine and the Compose plugin (Ubuntu 22.04 or 24.04, 2 GB RAM is enough for
+  the ERP; 4 GB with the queue as well, since each stack has its own MySQL).
+- Your domain added to a (free) Cloudflare account, with its nameservers pointed at Cloudflare. Tunnel
+  hostnames can only be created on a domain whose DNS Cloudflare runs; you do not create DNS records
+  for the subdomains yourself, the tunnel does.
+- This repository on the VPS (and the queue's, next to it, if you run the queue).
 
 ## 1. Create the tunnel in Cloudflare
 
@@ -27,6 +37,11 @@ open web ports, no certificates and no reverse proxy; Cloudflare terminates HTTP
    - Service type **HTTP**, URL **`app:3000`**
 
    Cloudflare creates the DNS record for you.
+4. For the pharmacy queue, add a second public hostname on the **same tunnel**:
+   - Subdomain: `queue` (or anything), Domain: your domain, so the address is `queue.example.com`
+   - Service type **HTTP**, URL **`queue:3000`**
+
+   It answers `502` until the queue's stack is running; that is expected.
 
 ## 2. Prepare the VPS
 
@@ -34,6 +49,9 @@ open web ports, no certificates and no reverse proxy; Cloudflare terminates HTTP
 # firewall: allow only SSH in; the tunnel needs no inbound port
 sudo ufw allow OpenSSH
 sudo ufw enable
+
+# once per VPS: the network the ERP and the queue share (both compose files expect it)
+docker network create pharmacy-shared
 
 git clone <your repository url> pharma-vault && cd pharma-vault
 cp .env.production.example .env.production
@@ -48,6 +66,7 @@ Fill in `.env.production`:
 | `SECRET_KEY` | `openssl rand -hex 48` |
 | `MYSQL_PASSWORD`, `MYSQL_ROOT_PASSWORD` | `openssl rand -base64 24` (each) |
 | `APP_TIMEZONE` | your business time zone, for example `Asia/Manila` |
+| `INTEGRATION_API_TOKEN` | only if you run the queue: `openssl rand -hex 32`; the queue's `ERP_API_TOKEN` gets the same value |
 
 `.env.production` is git-ignored. Keep a copy somewhere safe (a password manager): without
 `MYSQL_*` you cannot restore the database volume, and a new `SECRET_KEY` signs everyone out.
@@ -134,6 +153,8 @@ Test a restore on a spare machine before you need one.
 
 - **Cloudflare Access** (Zero Trust → Access → Applications): put a login (one-time email code, Google)
   in front of `erp.example.com`. The app has its own sign-in, but Access keeps strangers off it entirely.
+  Do not put Access on the whole queue hostname: customers use `queue.example.com/customer` without an
+  account. If you want it there, protect only the staff paths (`/`, `/staff/*`).
   The sign-up page (`/register-page`) creates accounts that can do nothing until an admin grants
   roles, yet you may not want it reachable: Access or a Cloudflare WAF rule on `/register*` closes it.
 - **Cloudflare SSL/TLS**: set the mode to *Full* and turn on *Always Use HTTPS*. Traffic from Cloudflare
@@ -146,7 +167,9 @@ Test a restore on a spare machine before you need one.
 
 | Symptom | Cause and fix |
 | --- | --- |
+| `network pharmacy-shared declared as external, but could not be found` | Create it once: `docker network create pharmacy-shared`, then `pvc up -d` again. |
 | Tunnel page says *Inactive*, or `1033`/`502` from Cloudflare | `pvc logs cloudflared`: wrong or empty `TUNNEL_TOKEN`, or the hostname's service URL is not `http://app:3000`. `pvc ps` must show `app` healthy. |
+| `502` on the queue's subdomain only | The queue's stack is not running or not healthy (see its `docs/DEPLOYMENT.md`), or that hostname's service URL is not `http://queue:3000`. |
 | Sign in succeeds but you land back on the login page | The secure session cookie is not being accepted: the app must see `X-Forwarded-Proto: https`. Keep `TRUST_PROXY: 1` (already set in `compose.prod.yaml`) and always use the `https://` address. |
 | `app` restarts in a loop | `pvc logs app`. `SECRET_KEY is required` means it is missing from `.env.production`; a database error means the MySQL password differs from the one the data volume was created with. |
 | Tables are missing on a new install | `schema.sql` runs only on an *empty* data volume. If the first start failed halfway: `pvc down -v` (deletes the database volume!), then `pvc up -d`. |

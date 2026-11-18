@@ -62,6 +62,8 @@ ERP_MEDICINE_ACTIVE_VALUE=ACTIVE
 ```
 
 The queue sends `Authorization: Bearer <token>` by default, which this endpoint accepts. If the
-queue runs on the same Docker host, use the ERP's internal address (for example `http://app:3000`
-on a shared network) instead of the public one. Test it from the queue's project root with the
+queue runs on the same Docker host, use the ERP's internal address instead of the public one: with
+both `compose.prod.yaml` stacks on the `pharmacy-shared` network that is `http://pharma-vault:3000`,
+and the queue's `compose.prod.yaml` already sets it and the field mapping above, so its
+`.env.production` only needs `ERP_API_TOKEN`. Test it from the queue's project root with the
 command in its guide; a match prints the ERP name, no match prints `null`.
