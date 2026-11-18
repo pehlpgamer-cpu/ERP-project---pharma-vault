@@ -52,3 +52,7 @@ electron/
 .superpowers/
 backups/
 deploy/
+
+# Localhost-mode overrides are run from the host, never needed in the image
+compose.localhost.yaml
+localhost.env

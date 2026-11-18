@@ -1,0 +1,20 @@
+# Localhost mode: the production stack, reachable at http://localhost:3000 on this computer only,
+# without the Cloudflare Tunnel. Use it on a laptop or before the tunnel is set up.
+#
+#   docker compose --env-file .env.production --env-file localhost.env -f compose.prod.yaml -f compose.localhost.yaml up -d
+#
+# - The port is bound to 127.0.0.1: other devices on the network cannot reach it.
+# - The session cookie is not marked Secure, because the browser talks plain http:// to localhost.
+# - cloudflared does not start (localhost.env only satisfies compose.prod.yaml's TUNNEL_TOKEN check).
+# - The pharmacy queue still reaches the ERP over the pharmacy-shared network, not through this port.
+# To go public later, run the normal command without the two localhost files (docs/DEPLOYMENT.md).
+
+services:
+  app:
+    ports:
+      - "127.0.0.1:${ERP_LOCAL_PORT:-3000}:3000"
+    environment:
+      SESSION_COOKIE_SECURE: "false"
+
+  cloudflared:
+    profiles: ["tunnel"]

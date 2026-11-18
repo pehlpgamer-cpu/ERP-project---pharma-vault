@@ -93,6 +93,20 @@ unset PW
 Open `https://erp.example.com`, sign in, and add your branches' people under **Users**. The bootstrap
 creates the branch and one cash register; it is safe to run again (see Upgrading).
 
+## Localhost mode (no tunnel)
+
+To use the stack on the machine it runs on, for example a laptop, or before the tunnel exists, add
+the two localhost files. The ERP is then at `http://localhost:3000` (that computer only), cloudflared
+does not start, and the session cookie works over plain `http://`:
+
+```bash
+docker compose --env-file .env.production --env-file localhost.env -f compose.prod.yaml -f compose.localhost.yaml up -d
+```
+
+The data is the same as in tunnel mode. Switch back by running the normal `up -d` command (without the
+localhost files): it removes the port and restores the secure cookie. `ERP_LOCAL_PORT` (set in your
+shell) picks another port. The queue has the same mode at `http://localhost:3001`.
+
 ## Day to day
 
 Shorten the commands once per shell: `alias pvc='docker compose --env-file .env.production -f compose.prod.yaml'`.
